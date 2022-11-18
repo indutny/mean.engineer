@@ -11,6 +11,13 @@ const BASE_URL = `https://${HOST}`;
 
 const app = express();
 
+app.use(express.json());
+
+app.all('*', function (req, res, next) {
+  console.log(req.method, req.headers, req.url, req.body);
+  next();
+});
+
 app.get('/.well-known/webfinger', (req, res) => {
   const { resource = '' } = req.query;
   const accountMatch = resource.match(/^acct:(.*)@(.*)$/);
