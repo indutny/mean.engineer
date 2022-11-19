@@ -20,8 +20,13 @@ export default (): Router => {
   });
 
   router.get('/:user', (req, res) => {
-    if (!req.accepts('application/activity+json')) {
+    if (req.accepts('text/html')) {
       res.status(404).send('HTML interface not implemented');
+      return;
+    }
+
+    if (!req.accepts('application/activity+json')) {
+      res.status(400).send('Invalid Accept header');
       return;
     }
 

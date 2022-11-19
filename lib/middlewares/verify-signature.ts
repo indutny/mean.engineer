@@ -2,8 +2,11 @@ import assert from 'assert';
 import { createVerify } from 'crypto';
 import LRU from 'lru-cache';
 import type { Request, RequestHandler } from 'express';
+import createDebug from 'debug';
 
 import { compact } from '../jsonld.js';
+
+const debug = createDebug('me:verify-signature');
 
 const MAX_AGE = 12 * 3600 * 1000;
 
@@ -127,6 +130,7 @@ export default function verifySignature(
     try {
       req.senderKey = await v.verify(req);
     } catch (error) {
+      debug('got verify error', error);
       res.status(400)
         .send({ error: 'Invalid signature', details: error.message });
       return;
