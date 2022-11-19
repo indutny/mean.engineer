@@ -1,3 +1,7 @@
+# Toot!
+
+Makes GET /api/v1/instance request.
+
 # WebFinger
 
 Looks like host metadata is requested if web finger 404s.
