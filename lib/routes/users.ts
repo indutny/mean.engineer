@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import { BASE_URL, USER, USER_FULL_NAME } from '../config.js';
 import { compact } from '../jsonld.js';
-import verifySignature from '../middlewares/verify-signature';
+import verifySignature from '../middlewares/verify-signature.js';
 
 export default (): Router => {
   const router = Router();
