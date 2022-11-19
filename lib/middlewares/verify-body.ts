@@ -1,6 +1,9 @@
 import assert from 'assert';
 import { createHash, timingSafeEqual } from 'crypto';
 import type { Request, Response } from 'express';
+import createDebug from 'debug';
+
+const debug = createDebug('me:verifyBody');
 
 export function verifyBody(req: Request, res: Response, body: Buffer): void {
   const digest = req.get('digest');
@@ -25,6 +28,11 @@ export function verifyBody(req: Request, res: Response, body: Buffer): void {
 
   const actual = h.digest();
   if (!timingSafeEqual(actual, expected)) {
+    debug(
+      'body digest error actual=%j expected=%j',
+      actual.toString('base64'),
+      expected.toString('base64'),
+    );
     throw new Error('Invalid digest');
   }
 }
