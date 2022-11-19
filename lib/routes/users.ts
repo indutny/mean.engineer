@@ -65,10 +65,15 @@ export default (): Router => {
 
     const { type, id, actor, object } = body;
 
+    if (req.senderKey && req.senderKey.owner !== actor) {
+      res.status(403).send({ error: 'Signature does not match actor' });
+      return;
+    }
+
     if (type === 'Follow') {
       // TODO(indutny): respond with Accept
     }
-    console.log(req.senderKey, body);
+    console.log(body);
 
     res.status(500).send({ error: 'oops' });
   });
