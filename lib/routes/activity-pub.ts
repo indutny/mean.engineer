@@ -39,8 +39,8 @@ export default (app: Application): void => {
   });
 
   app.post('/users/:user/inbox', async (req, res) => {
-    const { accept } = req.headers;
-    if (!accept?.startsWith('application/activity+json')) {
+    const { 'content-type': contentType } = req.headers;
+    if (!contentType?.startsWith('application/activity+json')) {
       res.status(404).send('HTML interface not implemented');
       return;
     }
