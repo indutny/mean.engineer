@@ -1,4 +1,4 @@
-import type { Application } from 'express';
+import { Router } from 'express';
 
 import {
   HOST,
@@ -14,8 +14,10 @@ import {
   MAX_ATTACHMENTS,
 } from '../config.js';
 
-export default (app: Application): void => {
-  app.get('/api/v1/instance', (req, res) => {
+export default (): Router => {
+  const router = Router();
+
+  router.get('/instance', (req, res) => {
     res.send({
       uri: HOST,
       title: SERVER_TITLE,
@@ -69,7 +71,9 @@ export default (app: Application): void => {
   });
 
   // TODO(indutny): Sign-in flow for Toot!
-  app.post('/api/v1/apps', (req, res) => {
+  router.post('/apps', (req, res) => {
     res.status(404).send({ error: 'oops' });
   });
+
+  return router;
 };

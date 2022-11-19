@@ -1,11 +1,11 @@
 import type { Application } from 'express';
 
-import activityPub from './activity-pub.js';
 import mastodon from './mastodon.js';
 import webfinger from './webfinger.js';
+import users from './users.js';
 
 export default (app: Application): void => {
-  activityPub(app);
-  mastodon(app);
-  webfinger(app);
+  app.use('/api/v1', mastodon());
+  app.use('/.well-known', webfinger());
+  app.use('/users', users());
 }

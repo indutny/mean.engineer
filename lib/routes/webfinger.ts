@@ -1,9 +1,11 @@
-import type { Application } from 'express';
+import { Router } from 'express';
 
 import { BASE_URL, HOST } from '../config.js';
 
-export default (app: Application): void => {
-  app.get('/.well-known/host-meta', (req, res) => {
+export default (): Router => {
+  const router = Router();
+
+  router.get('/host-meta', (req, res) => {
     res.type('application/xrd+xml; charset=utf-8').send([
       '<?xml version="1.0" encoding="UTF-8"?>',
       '<XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">',
@@ -13,7 +15,7 @@ export default (app: Application): void => {
     ].join('\n'));
   });
 
-  app.get('/.well-known/webfinger', (req, res) => {
+  router.get('/webfinger', (req, res) => {
     const { resource } = req.query;
     if (typeof resource !== 'string') {
       res.status(400).send({ error: 'Invalid or missing resource query' });
@@ -58,4 +60,5 @@ export default (app: Application): void => {
     });
   });
 
+  return router;
 };
