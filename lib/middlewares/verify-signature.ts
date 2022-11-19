@@ -64,10 +64,10 @@ export class Verifier {
 
     const plaintext = headers.map((key) => {
       if (key === '(request-target)') {
-        return `${req.method.toLowerCase()} ${req.url}`;
+        return `${key}: ${req.method.toLowerCase()} ${req.originalUrl}`;
       }
 
-      return req.get(key) ?? '';
+      return `${key}: ${req.get(key) ?? ''}`;
     }).join('\n');
 
     const publicKey = await this.getPublicKey(owner, id);
