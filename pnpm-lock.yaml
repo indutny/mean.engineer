@@ -1,7 +1,6 @@
 lockfileVersion: 5.3
 
 specifiers:
-  '@types/better-sqlite3': ^7.6.2
   '@types/express': ^4.17.14
   '@types/jsonld': ^1.5.7
   '@types/node': ^18.11.9
@@ -15,7 +14,6 @@ dependencies:
   typescript: 4.9.3
 
 devDependencies:
-  '@types/better-sqlite3': 7.6.2
   '@types/express': 4.17.14
   '@types/jsonld': 1.5.7
   '@types/node': 18.11.9
@@ -32,12 +30,6 @@ packages:
     transitivePeerDependencies:
       - web-streams-polyfill
     dev: false
-
-  /@types/better-sqlite3/7.6.2:
-    resolution: {integrity: sha512-RgmaapusqTq6IMAr4McMyAsC6RshYTCjXCnzwVV59WctUxC8bNPyUfT9t5F81lKcU41lLurhjqjoMHfauzfqGg==}
-    dependencies:
-      '@types/node': 18.11.9
-    dev: true
 
   /@types/body-parser/1.19.2:
     resolution: {integrity: sha512-ALYone6pm6QmwZoAgeyNksccT9Q4AWZQ6PvfwR37GT6r6FWUPguq6sUmNGSMV2Wr761oQoBxwGGa6DR5o1DC9g==}
