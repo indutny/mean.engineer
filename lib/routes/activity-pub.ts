@@ -1,11 +1,13 @@
+import type { Application } from 'express';
+
 import { BASE_URL, USER, USER_FULL_NAME } from '../config.js';
 
-export default (app) => {
+export default (app: Application): void => {
   // TODO(indutny): verify signature
 
   app.get('/users/:user', (req, res) => {
     const { accept } = req.headers;
-    if (!accept.startsWith('application/activity+json')) {
+    if (!accept?.startsWith('application/activity+json')) {
       res.status(404).send('HTML interface not implemented');
       return;
     }

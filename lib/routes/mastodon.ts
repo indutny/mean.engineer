@@ -1,3 +1,5 @@
+import type { Application } from 'express';
+
 import {
   HOST,
   SERVER_TITLE,
@@ -12,7 +14,7 @@ import {
   MAX_ATTACHMENTS,
 } from '../config.js';
 
-export default (app) => {
+export default (app: Application): void => {
   app.get('/api/v1/instance', (req, res) => {
     res.send({
       uri: HOST,
