@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@types/express": "^4.17.14",
+    "@types/express-serve-static-core": "^4.17.31",
     "@types/jsonld": "^1.5.7",
     "@types/node": "^18.11.9"
   }
