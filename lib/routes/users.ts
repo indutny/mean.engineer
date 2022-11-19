@@ -63,6 +63,7 @@ export default (): Router => {
     if (type === 'Follow') {
       // TODO(indutny): respond with Accept
     }
+    console.log(req.senderKey, body);
 
     res.status(500).send({ error: 'oops' });
   });
