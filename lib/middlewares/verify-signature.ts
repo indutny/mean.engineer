@@ -9,6 +9,7 @@ import { compact } from '../jsonld.js';
 const debug = createDebug('me:verify-signature');
 
 const MAX_AGE = 12 * 3600 * 1000;
+const SKEW = 3600 * 1000;
 
 declare global {
   namespace Express {
@@ -79,7 +80,7 @@ export class Verifier {
     }
 
     const age = Date.now() - new Date(req.get('date') ?? Date.now()).getTime();
-    if (age > MAX_AGE) {
+    if (age > MAX_AGE + SKEW) {
       throw new Error('Request is too old');
     }
 

@@ -62,7 +62,7 @@ export class Outbox {
     const inbox = await this.getInbox(target);
 
     const digest = createHash('sha256').update(json).digest('base64');
-    const date = JSON.parse(JSON.stringify(new Date()));
+    const date = new Date().toUTCString();
     const { host } = new URL(target);
 
     const plaintext = [
