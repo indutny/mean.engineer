@@ -106,6 +106,24 @@ export class Database {
     `).run({ id });
   }
 
+  // TODO(indutny): cache?
+  public getFollowers(owner: string): ReadonlyArray<string> {
+    return this.db.prepare(`
+      SELECT actor FROM followers
+      WHERE owner = $owner
+      ORDER BY createdAt DESC
+    `).pluck().all({ owner });
+  }
+
+  // TODO(indutny): cache?
+  public getFollowing(actor: string): ReadonlyArray<string> {
+    return this.db.prepare(`
+      SELECT owner FROM followers
+      WHERE actor = $actor
+      ORDER BY createdAt DESC
+    `).pluck().all({ actor });
+  }
+
   //
   // Private
   //
@@ -132,6 +150,7 @@ export class Database {
         );
 
         CREATE INDEX followers_by_owner ON followers (owner, createdAt ASC);
+        CREATE INDEX followers_by_actor ON followers (actor, createdAt ASC);
 
         CREATE TABLE likes (
           id STRING PRIMARY KEY,

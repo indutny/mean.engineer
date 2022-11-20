@@ -25,7 +25,42 @@ export default (db: Database, inbox: Inbox): Router => {
   });
 
   router.use(verifySignature());
+
   router.use(async (req, res, next) => {
+    if (req.method === 'POST') {
+      if (!req.is('application/activity+json')) {
+        res.status(400).send({ error: 'Bad content-type' });
+        return;
+      }
+
+      next();
+      return;
+    }
+
+    if (req.method === 'GET') {
+      if (req.accepts('text/html')) {
+        res.status(404).send('HTML interface not implemented');
+        return;
+      }
+
+      if (!req.accepts('application/activity+json')) {
+        res.status(400).send('Invalid Accept header');
+        return;
+      }
+
+      next();
+      return;
+    }
+
+    next();
+  });
+
+  router.use(async (req, res, next) => {
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      next();
+      return;
+    }
+
     try {
       req.body = await compact(req.body);
     } catch (error) {
@@ -37,16 +72,6 @@ export default (db: Database, inbox: Inbox): Router => {
   });
 
   router.get('/:user', (req, res) => {
-    if (req.accepts('text/html')) {
-      res.status(404).send('HTML interface not implemented');
-      return;
-    }
-
-    if (!req.accepts('application/activity+json')) {
-      res.status(400).send('Invalid Accept header');
-      return;
-    }
-
     const { user } = req;
     assert(user, 'Must have user');
 
@@ -70,12 +95,43 @@ export default (db: Database, inbox: Inbox): Router => {
     });
   });
 
-  router.post('/:user/inbox', async (req, res) => {
-    if (!req.is('application/activity+json')) {
-      res.status(400).send({ error: 'Bad content-type' });
-      return;
-    }
+  router.get('/:user/outbox', async (req, res) => {
+    res.status(500).send({ error: 'not implemented' });
+  });
 
+  router.get('/:user/followers', async (req, res) => {
+    const { user } = req;
+    assert(user, 'Must have user');
+
+    // TODO(indutny): pagination
+    const followers = db.getFollowers(user.name);
+
+    res.status(200).type('application/activity+json').send({
+      '@context': 'https://www.w3.org/ns/activitystreams',
+      summary: `${user.profileName}'s followers`,
+      type: 'Collection',
+      totalItems: followers.length,
+      orderedItems: followers,
+    });
+  });
+
+  router.get('/:user/following', async (req, res) => {
+    const { user } = req;
+    assert(user, 'Must have user');
+
+    // TODO(indutny): pagination
+    const followers = db.getFollowing(user.name);
+
+    res.status(200).type('application/activity+json').send({
+      '@context': 'https://www.w3.org/ns/activitystreams',
+      summary: `${user.profileName}'s followers`,
+      type: 'Collection',
+      totalItems: followers.length,
+      orderedItems: followers,
+    });
+  });
+
+  router.post('/:user/inbox', async (req, res) => {
     if (!req.senderKey) {
       res.status(401).send({ error: 'Signature is required' });
       return;
