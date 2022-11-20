@@ -43,9 +43,19 @@ export class Inbox {
       'Invalid "object" field of Follow request'
     );
 
-    this.db.follow({ id: follow.id ,owner: user.name, actor: follow.actor });
-
-    await this.outbox.acceptFollow(user, follow);
+    let usedId: string | undefined;
+    try {
+      usedId = this.db.follow({
+        id: follow.id,
+        owner: user.name,
+        actor: follow.actor,
+      });
+      await this.outbox.acceptFollow(user, follow);
+    } catch (error) {
+      if (usedId !== undefined) {
+        this.db.unfollow(usedId);
+      }
+    }
   }
 
   private async handleUndo(user: User, activity: Activity): Promise<void> {
