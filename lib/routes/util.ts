@@ -16,6 +16,7 @@ export function paginate(
   const { page: pageString } = req.query;
 
   let page: number | undefined;
+  let nextPage = 1;
   if (pageString && typeof pageString === 'string') {
     page = parseInt(pageString, 10);
     if (page.toString() !== pageString) {
@@ -28,16 +29,17 @@ export function paginate(
       return;
     }
 
+    // To be returned to requestor
+    nextPage = page + 1;
+
     // Zero-based internal indexing
     page -= 1;
   }
 
-  // TODO(indutny): pagination
-
   const {
     totalRows,
     rows,
-    pageCount,
+    hasMore,
   } = getData(page);
 
   if (page === undefined) {
@@ -56,8 +58,7 @@ export function paginate(
     type: 'OrderedCollectionPage',
     totalItems: totalRows,
     partOf: url,
-    next: (rows === undefined || rows.length > 0) ?
-      `${url}?page=${page + 1}` : undefined,
+    next: hasMore ? `${url}?page=${nextPage}` : undefined,
     orderedItems: rows,
   });
 }

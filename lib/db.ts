@@ -22,7 +22,7 @@ export type CreateUserOptions = Readonly<{
 export type Paginated<Row> = Readonly<{
   totalRows: number;
   rows?: ReadonlyArray<Row>;
-  pageCount: number;
+  hasMore: boolean;
 }>;
 
 export type FollowOptions = Readonly<{
@@ -149,6 +149,7 @@ export class Database {
     ).pluck().get(params);
 
     let rows: ReadonlyArray<Row> | undefined;
+    let hasMore = totalRows !== 0;
     if (page !== undefined) {
       let stmt = this.db.prepare(`
         ${query.replace('<COLUMNS>', columns)}
@@ -160,17 +161,21 @@ export class Database {
         stmt = stmt.pluck();
       }
 
+
+      const offset = page * DB_PAGE_SIZE;
       rows = stmt.all({
         ...params,
         pageSize: DB_PAGE_SIZE,
-        offset: page * DB_PAGE_SIZE,
+        offset,
       });
+
+      hasMore = (offset + rows.length) < totalRows;
     }
 
     return {
       totalRows,
       rows,
-      pageCount: Math.ceil(totalRows / DB_PAGE_SIZE),
+      hasMore,
     };
   }
 
