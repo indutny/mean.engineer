@@ -1,5 +1,7 @@
 export const DB_PATH = 'db.sqlite';
 
+export const DB_PAGE_SIZE = 10;
+
 export const HOST = 'mean.engineer';
 
 export const BASE_URL = `https://${HOST}`;

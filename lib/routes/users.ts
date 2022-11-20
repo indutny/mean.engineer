@@ -7,6 +7,7 @@ import { compact } from '../jsonld.js';
 import verifySignature from '../middlewares/verify-signature.js';
 import type { Database } from '../db.js';
 import type { Inbox } from '../inbox.js';
+import { paginate } from './util.js';
 
 const debug = createDebug('me:routes:users');
 
@@ -103,15 +104,10 @@ export default (db: Database, inbox: Inbox): Router => {
     const { user } = req;
     assert(user, 'Must have user');
 
-    // TODO(indutny): pagination
-    const followers = db.getFollowers(user.name);
-
-    res.status(200).type('application/activity+json').send({
-      '@context': 'https://www.w3.org/ns/activitystreams',
+    paginate(req, res, {
+      url: `${BASE_URL}/users/${user.name}/followers`,
       summary: `${user.profileName}'s followers`,
-      type: 'OrderedCollection',
-      totalItems: followers.length,
-      orderedItems: followers,
+      getData: (page) => db.getFollowers(user.name, page),
     });
   });
 
@@ -119,15 +115,10 @@ export default (db: Database, inbox: Inbox): Router => {
     const { user } = req;
     assert(user, 'Must have user');
 
-    // TODO(indutny): pagination
-    const following = db.getFollowing(user.name);
-
-    res.status(200).type('application/activity+json').send({
-      '@context': 'https://www.w3.org/ns/activitystreams',
+    paginate(req, res, {
+      url: `${BASE_URL}/users/${user.name}/following`,
       summary: `${user.profileName}'s following`,
-      type: 'OrderedCollection',
-      totalItems: following.length,
-      orderedItems: following,
+      getData: (page) => db.getFollowing(user.name, page),
     });
   });
 

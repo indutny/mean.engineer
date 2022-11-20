@@ -2,7 +2,7 @@ import { randomUUID, generateKeyPairSync } from 'crypto';
 import NativeConstructor from 'better-sqlite3';
 import type { Database as Native } from 'better-sqlite3';
 
-import { BASE_URL, DB_PATH } from './config.js';
+import { BASE_URL, DB_PATH, DB_PAGE_SIZE } from './config.js';
 
 export type User = Readonly<{
   name: string;
@@ -19,10 +19,21 @@ export type CreateUserOptions = Readonly<{
   summary: string;
 }>;
 
+export type Paginated<Row> = Readonly<{
+  totalRows: number;
+  rows?: ReadonlyArray<Row>;
+  pageCount: number;
+}>;
+
 export type FollowOptions = Readonly<{
   id?: string;
   owner: string;
   actor: string;
+}>;
+
+type PaginateOptions = Readonly<{
+  page?: number;
+  pluck?: boolean;
 }>;
 
 export class Database {
@@ -106,27 +117,62 @@ export class Database {
     `).run({ id });
   }
 
-  // TODO(indutny): cache?
-  public getFollowers(owner: string): ReadonlyArray<string> {
-    return this.db.prepare(`
-      SELECT actor FROM followers
+  public getFollowers(owner: string, page?: number): Paginated<string> {
+    return this.paginate(`
+      SELECT <COLUMNS> FROM followers
       WHERE owner = $owner
       ORDER BY createdAt DESC
-    `).pluck().all({ owner });
+    `, 'actor', { owner }, { page, pluck: true });
   }
 
-  // TODO(indutny): cache?
-  public getFollowing(actor: string): ReadonlyArray<string> {
-    return this.db.prepare(`
-      SELECT owner FROM followers
+  public getFollowing(actor: string, page?: number): Paginated<string> {
+    return this.paginate(`
+      SELECT <COLUMNS> FROM followers
       WHERE actor = $actor
       ORDER BY createdAt DESC
-    `).pluck().all({ actor });
+    `, 'owner', { actor }, { page, pluck: true });
   }
 
   //
   // Private
   //
+
+  // TODO(indutny): cache
+  private paginate<Row>(
+    query: string,
+    columns: string,
+    params: Record<string, unknown>,
+    { page, pluck = false }: PaginateOptions
+  ): Paginated<Row> {
+    const totalRows = this.db.prepare(
+      query.replace('<COLUMNS>', 'COUNT(*)')
+    ).pluck().get(params);
+
+    let rows: ReadonlyArray<Row> | undefined;
+    if (page !== undefined) {
+      let stmt = this.db.prepare(`
+        ${query.replace('<COLUMNS>', columns)}
+        LIMIT $pageSize
+        OFFSET $offset
+      `);
+
+      if (pluck) {
+        stmt = stmt.pluck();
+      }
+
+      rows = stmt.all({
+        ...params,
+        pageSize: DB_PAGE_SIZE,
+        offset: page * DB_PAGE_SIZE,
+      });
+    }
+
+    return {
+      totalRows,
+      rows,
+      pageCount: Math.ceil(totalRows / DB_PAGE_SIZE),
+    };
+  }
 
   private static migrations: ReadonlyArray<(db: Native) => void> = [
     (db) => {
