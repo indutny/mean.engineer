@@ -87,15 +87,10 @@ export class Outbox {
       'signature': [
         `keyId="${BASE_URL}/users/${user.name}#main-key"`,
         'algorithm="rsa-sha256"',
-        'headers="(request-target) host date digest content-type',
+        'headers="(request-target) host date digest content-type"',
         `signature="${signature}"`,
       ].join(','),
     };
-
-    console.error('===');
-    console.error(plaintext);
-    console.error(headers);
-    console.error('===');
 
     const res = await fetch(inbox, {
       method: 'POST',
