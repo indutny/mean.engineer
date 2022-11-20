@@ -5,6 +5,7 @@ import type { Request, RequestHandler } from 'express';
 import createDebug from 'debug';
 
 import { compact } from '../jsonld.js';
+import { USER_AGENT } from '../config.js';
 
 const debug = createDebug('me:verify-signature');
 
@@ -103,6 +104,7 @@ export class Verifier {
     const response = await fetch(owner, {
       headers: {
         accept: 'application/activity+json',
+        'user-agent': USER_AGENT,
       },
     });
 
