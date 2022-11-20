@@ -1,4 +1,7 @@
-import type { Database } from './db.js';
+import { randomUUID } from 'crypto';
+
+import type { User, Database } from './db.js';
+import type { Activity } from './as.js';
 
 import { BASE_URL } from './config.js';
 import type { Outbox } from './outbox.js';
@@ -6,13 +9,6 @@ import type { Outbox } from './outbox.js';
 export type InboxOptions = Readonly<{
   outbox: Outbox;
   db: Database;
-}>;
-
-export type Activity = Readonly<{
-  id: string;
-  type: string;
-  actor: string;
-  object: string;
 }>;
 
 export class Inbox {
@@ -24,7 +20,7 @@ export class Inbox {
     this.db = db;
   }
 
-  public async handleActivity(user: string, activity: Activity): Promise<void> {
+  public async handleActivity(user: User, activity: Activity): Promise<void> {
     const { type } = activity;
     if (type === 'Follow') {
       return this.handleFollowRequest(user, activity);
@@ -34,7 +30,7 @@ export class Inbox {
   }
 
   private async handleFollowRequest(
-    user: string,
+    user: User,
     follow: Activity,
   ): Promise<void> {
     const { object } = follow;
@@ -42,6 +38,8 @@ export class Inbox {
       throw new Error('Invalid "object" field of Follow request');
     }
 
+    this.db.follow({ owner: user.name, actor: follow.actor });
 
+    await this.outbox.acceptFollow(user, follow);
   }
 }

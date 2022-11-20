@@ -52,3 +52,5 @@ export const SUPPORTED_MIME_TYPES = [
 export const MAX_CHARACTERS = 500;
 
 export const MAX_ATTACHMENTS = 4;
+
+export const USER_AGENT = 'Mean Engineer 1.0.0';

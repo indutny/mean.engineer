@@ -81,7 +81,9 @@ export default (db: Database, inbox: Inbox): Router => {
       return;
     }
 
-    const { user } = req.params;
+    const { user } = req;
+    assert(user, 'Must have user');
+
     if (req.senderKey.owner !== req.body?.actor) {
       res.status(403).send({ error: 'Signature does not match actor' });
       return;

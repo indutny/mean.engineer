@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import NativeConstructor from 'better-sqlite3';
 import type { Database as Native } from 'better-sqlite3';
 
@@ -10,6 +11,11 @@ export type User = Readonly<{
   privateKey: string;
   publicKey: string;
   createdAt: number;
+}>;
+
+export type FollowOptions = Readonly<{
+  owner: string;
+  actor: string;
 }>;
 
 export class Database {
@@ -55,6 +61,24 @@ export class Database {
     return this.db
       .prepare('SELECT * FROM users WHERE name = $name')
       .get({ name });
+  }
+
+  //
+  // Followers
+  //
+
+  public follow({ owner, actor }: FollowOptions): string {
+    const id = randomUUID();
+
+    // TODO(indutny): cache statement
+    this.db.prepare(`
+      INSERT INTO followers
+      (id, owner, actor, createdAt)
+      VALUES
+      ($id, $owner, $actor, $createdAt)
+    `).run({ id, owner, actor, createdAt: Date.now() });
+
+    return id;
   }
 
   //
