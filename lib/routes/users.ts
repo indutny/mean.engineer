@@ -109,7 +109,7 @@ export default (db: Database, inbox: Inbox): Router => {
     res.status(200).type('application/activity+json').send({
       '@context': 'https://www.w3.org/ns/activitystreams',
       summary: `${user.profileName}'s followers`,
-      type: 'Collection',
+      type: 'OrderedCollection',
       totalItems: followers.length,
       orderedItems: followers,
     });
@@ -125,7 +125,7 @@ export default (db: Database, inbox: Inbox): Router => {
     res.status(200).type('application/activity+json').send({
       '@context': 'https://www.w3.org/ns/activitystreams',
       summary: `${user.profileName}'s following`,
-      type: 'Collection',
+      type: 'OrderedCollection',
       totalItems: following.length,
       orderedItems: following,
     });
