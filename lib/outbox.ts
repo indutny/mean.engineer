@@ -92,11 +92,15 @@ export class Outbox {
       ].join(','),
     };
 
-    await fetch(inbox, {
+    const res = await fetch(inbox, {
       method: 'POST',
       headers,
       body: json,
     });
+    assert(
+      200 <= res.status && res.status < 300,
+      `Invalid outbox status code: ${res.status}`,
+    );
   }
 
   private async getInbox(target: string): Promise<string> {
