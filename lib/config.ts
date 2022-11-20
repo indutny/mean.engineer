@@ -1,3 +1,5 @@
+export const DB_PATH = 'db.sqlite';
+
 export const HOST = 'mean.engineer';
 
 export const BASE_URL = `https://${HOST}`;
@@ -50,7 +52,3 @@ export const SUPPORTED_MIME_TYPES = [
 export const MAX_CHARACTERS = 500;
 
 export const MAX_ATTACHMENTS = 4;
-
-export const USER = 'test';
-
-export const USER_FULL_NAME = 'Fedor Indutny';

@@ -1,21 +1,26 @@
+import assert from 'assert';
 import { Router } from 'express';
+import createDebug from 'debug';
 
-import { BASE_URL, USER, USER_FULL_NAME } from '../config.js';
+import { BASE_URL } from '../config.js';
 import { compact } from '../jsonld.js';
 import verifySignature from '../middlewares/verify-signature.js';
+import type { Inbox } from '../inbox.js';
 
-export default (): Router => {
+const debug = createDebug('me:routes:users');
+
+export default (inbox: Inbox): Router => {
   const router = Router();
 
   router.use(verifySignature());
-
-  // TODO(indutny): verify signature
-  router.param('user', (req, res, next, user) => {
-    if (user !== USER) {
-      res.status(404).send({ error: 'user not found' });
+  router.use(async (req, res, next) => {
+    try {
+      req.body = await compact(req.body);
+    } catch (error) {
+      debug('Failed to compact JSON-LD', error);
+      res.status(400).send({ error: 'Bad input' });
       return;
     }
-
     next();
   });
 
@@ -30,7 +35,8 @@ export default (): Router => {
       return;
     }
 
-    const { user } = req.params;
+    const { user } = req;
+    assert(user, 'Must have user');
 
     res.type('application/activity+json').send({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -41,9 +47,14 @@ export default (): Router => {
       inbox: `${BASE_URL}/users/${user}/inbox`,
       outbox: `${BASE_URL}/users/${user}/outbox`,
       preferredUsername: user,
-      name: USER_FULL_NAME,
+      name: user.profileName,
+      summary: user.summary,
 
-      // TODO(indutny): public key
+      publicKey: {
+        id: `${BASE_URL}/users/${user.name}#main-key`,
+        owner: `${BASE_URL}/users/${user.name}`,
+        publicKeyPem: user.publicKey,
+      },
     });
   });
 
@@ -53,29 +64,23 @@ export default (): Router => {
       return;
     }
 
-    const { user } = req.params;
-
-    let body: any;
-    try {
-      body = await compact(req.body);
-    } catch (error) {
-      res.status(400).send({ error: 'Bad input' });
+    if (!req.senderKey) {
+      res.status(401).send({ error: 'Signature is required' });
       return;
     }
 
-    const { type, id, actor, object } = body;
-
-    if (req.senderKey && req.senderKey.owner !== actor) {
+    const { user } = req.params;
+    if (req.senderKey.owner !== req.body?.actor) {
       res.status(403).send({ error: 'Signature does not match actor' });
       return;
     }
 
-    if (type === 'Follow') {
-      // TODO(indutny): respond with Accept
+    try {
+      await inbox.handleActivity(user, req.body)
+      res.status(202).type('application/activity+json').send();
+    } catch (error) {
+      res.status(500).send({ error: 'oops' });
     }
-    console.log(body);
-
-    res.status(500).send({ error: 'oops' });
   });
 
   return router;
