@@ -65,7 +65,7 @@ export class Outbox {
     const date = JSON.parse(JSON.stringify(new Date()));
     const { host } = new URL(target);
 
-    const cleartext = [
+    const plaintext = [
       `(request-target): post ${inbox}`,
       `host: ${host}`,
       `date: ${date}`,
@@ -74,7 +74,7 @@ export class Outbox {
     ].join('\n');
 
     const signature = createSign('RSA-SHA256')
-      .update(cleartext)
+      .update(plaintext)
       .sign(user.privateKey)
       .toString('base64');
 
@@ -92,15 +92,23 @@ export class Outbox {
       ].join(','),
     };
 
+    console.error('===');
+    console.error(plaintext);
+    console.error(headers);
+    console.error('===');
+
     const res = await fetch(inbox, {
       method: 'POST',
       headers,
       body: json,
     });
-    assert(
-      200 <= res.status && res.status < 300,
-      `Invalid outbox status code: ${res.status}`,
-    );
+    if (res.status < 200 || res.status >= 300) {
+      const reason = await res.text();
+      throw new Error(
+        `Failed to post to inbox: ${inbox}, status: ${res.status}, ` +
+          `reason: ${reason}`
+      );
+    }
   }
 
   private async getInbox(target: string): Promise<string> {
