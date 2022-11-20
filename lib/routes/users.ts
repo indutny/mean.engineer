@@ -5,12 +5,24 @@ import createDebug from 'debug';
 import { BASE_URL } from '../config.js';
 import { compact } from '../jsonld.js';
 import verifySignature from '../middlewares/verify-signature.js';
+import type { Database } from '../db.js';
 import type { Inbox } from '../inbox.js';
 
 const debug = createDebug('me:routes:users');
 
-export default (inbox: Inbox): Router => {
+export default (db: Database, inbox: Inbox): Router => {
   const router = Router();
+
+  router.param('user', (req, res, next, name) => {
+    req.user = db.getUser(name);
+
+    if (!req.user) {
+      res.status(404).send({ error: 'user not found' });
+      return;
+    }
+
+    next();
+  });
 
   router.use(verifySignature());
   router.use(async (req, res, next) => {
@@ -40,13 +52,13 @@ export default (inbox: Inbox): Router => {
 
     res.type('application/activity+json').send({
       '@context': 'https://www.w3.org/ns/activitystreams',
-      id: `${BASE_URL}/users/${user}`,
+      id: `${BASE_URL}/users/${user.name}`,
       type: 'Person',
-      following: `${BASE_URL}/users/${user}/following`,
-      followers: `${BASE_URL}/users/${user}/followers`,
-      inbox: `${BASE_URL}/users/${user}/inbox`,
-      outbox: `${BASE_URL}/users/${user}/outbox`,
-      preferredUsername: user,
+      following: `${BASE_URL}/users/${user.name}/following`,
+      followers: `${BASE_URL}/users/${user.name}/followers`,
+      inbox: `${BASE_URL}/users/${user.name}/inbox`,
+      outbox: `${BASE_URL}/users/${user.name}/outbox`,
+      preferredUsername: user.name,
       name: user.profileName,
       summary: user.summary,
 

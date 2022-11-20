@@ -23,21 +23,9 @@ export type RoutesOptions = Readonly<{
 export default ({ inbox, db }: RoutesOptions): Router => {
   const router = Router();
 
-  // TODO(indutny): verify signature
-  router.param('user', (req, res, next, name) => {
-    req.user = db.getUser(name);
-
-    if (!req.user) {
-      res.status(404).send({ error: 'user not found' });
-      return;
-    }
-
-    next();
-  });
-
   router.use('/api/v1', mastodon());
   router.use('/.well-known', webfinger());
-  router.use('/users', users(inbox));
+  router.use('/users', users(db, inbox));
 
   return router;
 }
