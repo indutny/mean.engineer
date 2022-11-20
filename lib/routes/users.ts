@@ -91,9 +91,10 @@ export default (db: Database, inbox: Inbox): Router => {
 
     try {
       await inbox.handleActivity(user, req.body)
-      res.status(202).type('application/activity+json').send();
+      res.status(202).send();
     } catch (error) {
-      res.status(500).send({ error: 'oops' });
+      debug('failed to handle activity %j %j', req.body, error);
+      res.status(500).send({ error: error.message });
     }
   });
 
