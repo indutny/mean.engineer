@@ -109,7 +109,8 @@ export class Verifier {
     });
 
     const json = await response.json();
-    const { publicKey } = (await compact(json)) as any;
+    const { type, publicKey } = (await compact(json)) as any;
+    assert.strictEqual(type, 'Person', 'Remote did not return a Person');
     assert(publicKey, 'Remote did not return public key');
 
     const publicKeys = Array.isArray(publicKey) ? publicKey : [publicKey];
