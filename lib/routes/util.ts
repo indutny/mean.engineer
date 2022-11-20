@@ -22,6 +22,14 @@ export function paginate(
       res.status(400).send({ error: 'Invalid page' });
       return;
     }
+
+    if (page < 1) {
+      res.status(400).send({ error: 'Invalid page' });
+      return;
+    }
+
+    // Zero-based internal indexing
+    page -= 1;
   }
 
   // TODO(indutny): pagination
