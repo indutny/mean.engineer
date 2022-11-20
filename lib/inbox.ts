@@ -1,3 +1,4 @@
+import assert from 'assert';
 import { randomUUID } from 'crypto';
 
 import type { User, Database } from './db.js';
@@ -34,9 +35,11 @@ export class Inbox {
     follow: Activity,
   ): Promise<void> {
     const { object } = follow;
-    if (object !== `${BASE_URL}/users/${user}`) {
-      throw new Error('Invalid "object" field of Follow request');
-    }
+    assert.strictEqual(
+      object,
+      `${BASE_URL}/users/${user.name}`,
+      'Invalid "object" field of Follow request'
+    );
 
     this.db.follow({ owner: user.name, actor: follow.actor });
 
