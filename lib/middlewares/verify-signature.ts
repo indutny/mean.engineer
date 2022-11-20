@@ -110,7 +110,6 @@ export class Verifier {
 
     const json = await response.json();
     const ld = await compact(json);
-    debug('got remote object', owner, ld);
 
     const { publicKey } = ld as any;
     assert(publicKey, 'Remote did not return public key');
