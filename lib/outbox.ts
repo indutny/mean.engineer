@@ -23,7 +23,7 @@ export class Outbox {
   constructor({
     db,
     cacheSize = 100,
-    cacheTTL = 3600,
+    cacheTTL = 3600 * 1000,
   }: OutboxOptions) {
     this.db = db;
     this.inboxCache = new LRU({

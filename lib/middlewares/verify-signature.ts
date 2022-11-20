@@ -26,13 +26,17 @@ export type SenderKey = Readonly<{
 
 export type VerifySignatureOptions = Readonly<{
   cacheSize?: number;
+  cacheTTL?: number;
 }>;
 
 export class Verifier {
   private readonly cache: LRU<string, string>;
 
-  constructor({ cacheSize = 100 }: VerifySignatureOptions = {}) {
-    this.cache = new LRU({ max: cacheSize });
+  constructor({
+    cacheSize = 100,
+    cacheTTL = 3600 * 1000,
+  }: VerifySignatureOptions = {}) {
+    this.cache = new LRU({ max: cacheSize, ttl: cacheTTL });
   }
 
   public async verify(req: Request): Promise<SenderKey | undefined> {
