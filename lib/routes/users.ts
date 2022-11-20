@@ -109,7 +109,7 @@ export default (db: Database, inbox: Inbox): Router => {
     paginate(req, res, {
       url: `${getLocalUserURL(user)}/followers`,
       summary: `${user.profileName}'s followers`,
-      getData: (page) => db.getFollowers(user.name, page),
+      getData: (page) => db.getFollowers(getLocalUserURL(user), page),
     });
   });
 
@@ -120,7 +120,7 @@ export default (db: Database, inbox: Inbox): Router => {
     paginate(req, res, {
       url: `${getLocalUserURL(user)}/following`,
       summary: `${user.profileName}'s following`,
-      getData: (page) => db.getFollowing(user.name, page),
+      getData: (page) => db.getFollowing(getLocalUserURL(user), page),
     });
   });
 
