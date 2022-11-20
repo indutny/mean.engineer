@@ -71,7 +71,7 @@ export class Outbox {
       `(request-target): post ${inboxURL.pathname}${inboxURL.search}`,
       `host: ${host}`,
       `date: ${date}`,
-      `digest: ${digest}`,
+      `digest: sha-256=${digest}`,
       'content-type: application/activity+json'
     ].join('\n');
 
