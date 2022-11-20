@@ -17,6 +17,8 @@ export function paginate(
 
   let page: number | undefined;
   let nextPage = 1;
+
+  let dbPage: number | undefined;
   if (pageString && typeof pageString === 'string') {
     page = parseInt(pageString, 10);
     if (page.toString() !== pageString) {
@@ -33,14 +35,14 @@ export function paginate(
     nextPage = page + 1;
 
     // Zero-based internal indexing
-    page -= 1;
+    dbPage = page - 1;
   }
 
   const {
     totalRows,
     rows,
     hasMore,
-  } = getData(page);
+  } = getData(dbPage);
 
   if (page === undefined) {
     res.status(200).type('application/activity+json').send({
@@ -55,6 +57,7 @@ export function paginate(
 
   res.status(200).type('application/activity+json').send({
     '@context': 'https://www.w3.org/ns/activitystreams',
+    id: page === undefined ? url : `${url}?page=${page}`,
     type: 'OrderedCollectionPage',
     totalItems: totalRows,
     partOf: url,
