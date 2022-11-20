@@ -2,11 +2,11 @@ import assert from 'assert';
 import { Router } from 'express';
 import createDebug from 'debug';
 
-import { BASE_URL } from '../config.js';
 import { compact } from '../jsonld.js';
 import verifySignature from '../middlewares/verify-signature.js';
 import type { Database } from '../db.js';
 import type { Inbox } from '../inbox.js';
+import { getLocalUserURL } from '../util.js';
 import { paginate } from './util.js';
 
 const debug = createDebug('me:routes:users');
@@ -76,21 +76,23 @@ export default (db: Database, inbox: Inbox): Router => {
     const { user } = req;
     assert(user, 'Must have user');
 
+    const url = getLocalUserURL(user);
+
     res.type('application/activity+json').send({
       '@context': 'https://www.w3.org/ns/activitystreams',
-      id: `${BASE_URL}/users/${user.name}`,
+      id: url,
       type: 'Person',
-      following: `${BASE_URL}/users/${user.name}/following`,
-      followers: `${BASE_URL}/users/${user.name}/followers`,
-      inbox: `${BASE_URL}/users/${user.name}/inbox`,
-      outbox: `${BASE_URL}/users/${user.name}/outbox`,
+      following: `${url}/following`,
+      followers: `${url}/followers`,
+      inbox: `${url}/inbox`,
+      outbox: `${url}/outbox`,
       preferredUsername: user.name,
       name: user.profileName,
       summary: user.summary,
 
       publicKey: {
-        id: `${BASE_URL}/users/${user.name}#main-key`,
-        owner: `${BASE_URL}/users/${user.name}`,
+        id: `${url}#main-key`,
+        owner: url,
         publicKeyPem: user.publicKey,
       },
     });
@@ -105,7 +107,7 @@ export default (db: Database, inbox: Inbox): Router => {
     assert(user, 'Must have user');
 
     paginate(req, res, {
-      url: `${BASE_URL}/users/${user.name}/followers`,
+      url: `${getLocalUserURL(user)}/followers`,
       summary: `${user.profileName}'s followers`,
       getData: (page) => db.getFollowers(user.name, page),
     });
@@ -116,7 +118,7 @@ export default (db: Database, inbox: Inbox): Router => {
     assert(user, 'Must have user');
 
     paginate(req, res, {
-      url: `${BASE_URL}/users/${user.name}/following`,
+      url: `${getLocalUserURL(user)}/following`,
       summary: `${user.profileName}'s following`,
       getData: (page) => db.getFollowing(user.name, page),
     });

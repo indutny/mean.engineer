@@ -2,6 +2,7 @@ import assert from 'assert';
 import { randomUUID } from 'crypto';
 
 import type { User, Database } from './db.js';
+import { getLocalUserURL } from './util.js';
 import type { Activity } from './as.js';
 
 import { BASE_URL } from './config.js';
@@ -37,23 +38,26 @@ export class Inbox {
     follow: Activity,
   ): Promise<void> {
     const { object } = follow;
+    const owner = getLocalUserURL(user);
     assert.strictEqual(
       object,
-      `${BASE_URL}/users/${user.name}`,
+      owner,
       'Invalid "object" field of Follow request'
     );
+
+    const { actor } = follow;
 
     let usedId: string | undefined;
     try {
       usedId = this.db.follow({
         id: follow.id,
-        owner: user.name,
+        owner,
         actor: follow.actor,
       });
       await this.outbox.acceptFollow(user, follow);
     } catch (error) {
       if (usedId !== undefined) {
-        this.db.unfollow(usedId);
+        this.db.unfollow({ id: usedId, owner, actor });
       }
       throw error;
     }
@@ -78,6 +82,10 @@ export class Inbox {
       new URL(activity.actor).origin,
       'Cross-origin unfollow'
     );
-    this.db.unfollow(follow.id);
+    this.db.unfollow({
+      id: follow.id,
+      actor: activity.actor,
+      owner: getLocalUserURL(user),
+    });
   }
 }

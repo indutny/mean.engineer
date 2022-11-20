@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { BASE_URL, HOST } from '../config.js';
 import type { Database } from '../db.js';
+import { getLocalUserURL } from '../util.js';
 
 export default (db: Database): Router => {
   const router = Router();
@@ -35,16 +36,19 @@ export default (db: Database): Router => {
       return;
     }
 
-    if (!db.getUser(account)) {
+    const user = db.getUser(account);
+    if (!user) {
       res.status(404).send({ error: 'User not found' });
       return;
     }
+
+    const url = getLocalUserURL(user);
 
     res.send({
       subject: resource,
       aliases: [
         `${BASE_URL}/@${account}`,
-        `${BASE_URL}/users/${account}`
+        url,
       ],
       links: [
         {
@@ -55,7 +59,7 @@ export default (db: Database): Router => {
         {
           rel: 'self',
           type: 'application/activity+json',
-          href: `${BASE_URL}/users/${account}`
+          href: url,
         },
         {
           rel: 'http://ostatus.org/schema/1.0/subscribe',

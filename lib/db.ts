@@ -31,6 +31,12 @@ export type FollowOptions = Readonly<{
   actor: string;
 }>;
 
+export type UnfollowOptions = Readonly<{
+  id?: string;
+  owner: string;
+  actor: string;
+}>;
+
 type PaginateOptions = Readonly<{
   page?: number;
   pluck?: boolean;
@@ -109,12 +115,12 @@ export class Database {
     return id;
   }
 
-  public unfollow(id: string): void {
+  public unfollow({ id, owner, actor }: UnfollowOptions): void {
     // TODO(indutny): cache statement
     this.db.prepare(`
       DELETE FROM followers
-      WHERE id = $id
-    `).run({ id });
+      WHERE id IS $id OR (owner IS $owner AND actor IS $actor)
+    `).run({ id: id ?? null, owner, actor });
   }
 
   public getFollowers(owner: string, page?: number): Paginated<string> {
@@ -202,6 +208,7 @@ export class Database {
 
         CREATE INDEX followers_by_owner ON followers (owner, createdAt ASC);
         CREATE INDEX followers_by_actor ON followers (actor, createdAt ASC);
+        CREATE INDEX followers_by_owner_and_actor ON followers (owner, actor);
 
         CREATE TABLE likes (
           id STRING PRIMARY KEY,

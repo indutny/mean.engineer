@@ -7,6 +7,7 @@ import { USER_AGENT, BASE_URL } from './config.js';
 import type { User, Database } from './db.js';
 import type { Activity } from './as.js';
 import { compact } from './jsonld.js';
+import { getLocalUserURL } from './util.js';
 
 const debug = createDebug('me:outbox');
 
@@ -36,7 +37,7 @@ export class Outbox {
     const body = {
       id: `${BASE_URL}/${randomUUID()}`,
       type: 'Accept',
-      actor: `${BASE_URL}/users/${user.name}`,
+      actor: getLocalUserURL(user),
       object: follow,
     };
 
@@ -80,6 +81,8 @@ export class Outbox {
       .sign(user.privateKey)
       .toString('base64');
 
+    const keyId = `${getLocalUserURL(user)}#main-key`;
+
     const headers = {
       date,
       host,
@@ -87,7 +90,7 @@ export class Outbox {
       'content-type': 'application/activity+json',
       'user-agent': USER_AGENT,
       'signature': [
-        `keyId="${BASE_URL}/users/${user.name}#main-key"`,
+        `keyId="${keyId}"`,
         'algorithm="rsa-sha256"',
         'headers="(request-target) host date digest content-type"',
         `signature="${signature}"`,
