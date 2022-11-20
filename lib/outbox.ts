@@ -65,8 +65,10 @@ export class Outbox {
     const date = new Date().toUTCString();
     const { host } = new URL(target);
 
+    const inboxURL = new URL(inbox);
+
     const plaintext = [
-      `(request-target): post ${inbox}`,
+      `(request-target): post ${inboxURL.pathname}${inboxURL.search}`,
       `host: ${host}`,
       `date: ${date}`,
       `digest: ${digest}`,
@@ -92,7 +94,12 @@ export class Outbox {
       ].join(','),
     };
 
-    debug('making outgoing request to %j', inbox, plaintext);
+    debug(
+      'making outgoing request to %j plaintext=%j headers=%j',
+      inbox,
+      plaintext,
+      headers,
+    );
 
     const res = await fetch(inbox, {
       method: 'POST',
