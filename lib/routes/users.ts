@@ -93,7 +93,7 @@ export default (db: Database, inbox: Inbox): Router => {
       await inbox.handleActivity(user, req.body)
       res.status(202).send();
     } catch (error) {
-      debug('failed to handle activity %j %j', req.body, error);
+      debug('failed to handle activity %j %j', req.body, error.stack);
       res.status(500).send({ error: error.message });
     }
   });
