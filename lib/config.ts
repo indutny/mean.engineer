@@ -55,4 +55,4 @@ export const MAX_CHARACTERS = 500;
 
 export const MAX_ATTACHMENTS = 4;
 
-export const USER_AGENT = 'Mean Engineer 1.0.0';
+export const USER_AGENT = `Mean Engineer 1.0.0 (${HOST)}`;
