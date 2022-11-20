@@ -92,6 +92,8 @@ export class Outbox {
       ].join(','),
     };
 
+    debug('making outgoing request to %j', inbox, plaintext);
+
     const res = await fetch(inbox, {
       method: 'POST',
       headers,
