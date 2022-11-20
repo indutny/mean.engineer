@@ -120,14 +120,14 @@ export default (db: Database, inbox: Inbox): Router => {
     assert(user, 'Must have user');
 
     // TODO(indutny): pagination
-    const followers = db.getFollowing(user.name);
+    const following = db.getFollowing(user.name);
 
     res.status(200).type('application/activity+json').send({
       '@context': 'https://www.w3.org/ns/activitystreams',
-      summary: `${user.profileName}'s followers`,
+      summary: `${user.profileName}'s following`,
       type: 'Collection',
-      totalItems: followers.length,
-      orderedItems: followers,
+      totalItems: following.length,
+      orderedItems: following,
     });
   });
 
