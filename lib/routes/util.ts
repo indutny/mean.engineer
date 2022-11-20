@@ -56,7 +56,8 @@ export function paginate(
     type: 'OrderedCollectionPage',
     totalItems: totalRows,
     partOf: url,
-    next: rows.length > 0 ? `${url}?page=${page + 1}` : undefined,
+    next: (rows === undefined || rows.length > 0) ?
+      `${url}?page=${page + 1}` : undefined,
     orderedItems: rows,
   });
 }
