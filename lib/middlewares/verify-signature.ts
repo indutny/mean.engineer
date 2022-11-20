@@ -112,8 +112,7 @@ export class Verifier {
     const ld = await compact(json);
     debug('got remote object', owner, ld);
 
-    const { type, publicKey } = ld as any;
-    assert.strictEqual(type, 'Person', 'Remote did not return a Person');
+    const { publicKey } = ld as any;
     assert(publicKey, 'Remote did not return public key');
 
     const publicKeys = Array.isArray(publicKey) ? publicKey : [publicKey];
