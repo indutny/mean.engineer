@@ -55,6 +55,7 @@ export class Inbox {
       if (usedId !== undefined) {
         this.db.unfollow(usedId);
       }
+      throw error;
     }
   }
 
