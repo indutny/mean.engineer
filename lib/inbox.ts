@@ -25,6 +25,8 @@ export class Inbox {
     const { type } = activity;
     if (type === 'Follow') {
       return this.handleFollowRequest(user, activity);
+    } else if (type === 'Undo') {
+      return this.handleUndo(user, activity);
     }
 
     throw new Error(`Unsupported inbox activity: ${type}`);
@@ -41,8 +43,30 @@ export class Inbox {
       'Invalid "object" field of Follow request'
     );
 
-    this.db.follow({ owner: user.name, actor: follow.actor });
+    this.db.follow({ id: follow.id ,owner: user.name, actor: follow.actor });
 
     await this.outbox.acceptFollow(user, follow);
+  }
+
+  private async handleUndo(user: User, activity: Activity): Promise<void> {
+    const { object } = activity;
+    assert(object != null, 'Missing undo object');
+
+    const { type } = object;
+    if (type === 'Follow') {
+      return this.handleUnfollow(user, activity);
+    }
+
+    throw new Error(`Unsupported inbox activity: ${type}`);
+  }
+
+  private async handleUnfollow(user: User, activity: Activity): Promise<void> {
+    const { object: follow } = activity;
+    assert.strictEqual(
+      new URL(follow.id).origin,
+      new URL(activity.actor).origin,
+      'Cross-origin unfollow'
+    );
+    this.db.unfollow(follow.id);
   }
 }

@@ -24,7 +24,7 @@ export default ({ inbox, db }: RoutesOptions): Router => {
   const router = Router();
 
   router.use('/api/v1', mastodon());
-  router.use('/.well-known', webfinger());
+  router.use('/.well-known', webfinger(db));
   router.use('/users', users(db, inbox));
 
   return router;

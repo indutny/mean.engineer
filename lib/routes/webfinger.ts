@@ -1,8 +1,9 @@
 import { Router } from 'express';
 
 import { BASE_URL, HOST } from '../config.js';
+import type { Database } from '../db.js';
 
-export default (): Router => {
+export default (db: Database): Router => {
   const router = Router();
 
   router.get('/host-meta', (req, res) => {
@@ -31,6 +32,11 @@ export default (): Router => {
     const [, account, accountHost] = accountMatch;
     if (accountHost !== HOST) {
       res.status(404).send({ error: 'Not found' });
+      return;
+    }
+
+    if (!db.getUser(account)) {
+      res.status(404).send({ error: 'User not found' });
       return;
     }
 

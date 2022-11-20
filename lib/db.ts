@@ -1,8 +1,8 @@
-import { randomUUID } from 'crypto';
+import { randomUUID, generateKeyPairSync } from 'crypto';
 import NativeConstructor from 'better-sqlite3';
 import type { Database as Native } from 'better-sqlite3';
 
-import { DB_PATH } from './config.js';
+import { BASE_URL, DB_PATH } from './config.js';
 
 export type User = Readonly<{
   name: string;
@@ -13,7 +13,14 @@ export type User = Readonly<{
   createdAt: number;
 }>;
 
+export type CreateUserOptions = Readonly<{
+  name: string;
+  profileName: string;
+  summary: string;
+}>;
+
 export type FollowOptions = Readonly<{
+  id?: string;
   owner: string;
   actor: string;
 }>;
@@ -47,13 +54,21 @@ export class Database {
   // Users
   //
 
-  public createUser(user: User): void {
+  public createUser(user: CreateUserOptions): void {
     this.db.prepare(`
       INSERT INTO users
       (name, profileName, summary, privateKey, publicKey, createdAt)
       VALUES
       ($name, $profileName, $summary, $privateKey, $publicKey, $createdAt)
-    `).run(user);
+    `).run({
+      ...user,
+      ...generateKeyPairSync('rsa', {
+        modulusLength: 2048,
+        publicKeyEncoding: { type: 'spki', format: 'pem' },
+        privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+      }),
+      createdAt: Date.now(),
+    });
   }
 
   public getUser(name: string): User | undefined {
@@ -67,9 +82,11 @@ export class Database {
   // Followers
   //
 
-  public follow({ owner, actor }: FollowOptions): string {
-    const id = randomUUID();
-
+  public follow({
+    id = `${BASE_URL}/${randomUUID()}`,
+    owner,
+    actor,
+  }: FollowOptions): string {
     // TODO(indutny): cache statement
     this.db.prepare(`
       INSERT INTO followers
@@ -79,6 +96,14 @@ export class Database {
     `).run({ id, owner, actor, createdAt: Date.now() });
 
     return id;
+  }
+
+  public unfollow(id: string): void {
+    // TODO(indutny): cache statement
+    this.db.prepare(`
+      DELETE FROM followers
+      WHERE id = $id
+    `).run({ id });
   }
 
   //

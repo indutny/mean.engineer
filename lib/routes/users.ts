@@ -84,8 +84,16 @@ export default (db: Database, inbox: Inbox): Router => {
     const { user } = req;
     assert(user, 'Must have user');
 
-    if (req.senderKey.owner !== req.body?.actor) {
+    const { id, actor } = req.body;
+    if (req.senderKey.owner !== actor) {
       res.status(403).send({ error: 'Signature does not match actor' });
+      return;
+    }
+
+    // Can't squat others ids!
+    if (id && new URL(id).origin === new URL(actor).origin) {
+      debug('invalid activity id=%j actor=%j', id, req.body.actor);
+      res.status(400).send({ error: 'Invalid activity id' });
       return;
     }
 
