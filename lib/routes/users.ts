@@ -91,7 +91,7 @@ export default (db: Database, inbox: Inbox): Router => {
     }
 
     // Can't squat others ids!
-    if (id && new URL(id).origin === new URL(actor).origin) {
+    if (id && new URL(id).origin !== new URL(actor).origin) {
       debug('invalid activity id=%j actor=%j', id, req.body.actor);
       res.status(400).send({ error: 'Invalid activity id' });
       return;
