@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import { BASE_URL, HOST } from '../config.js';
 import type { Database } from '../db.js';
-import { getLocalUserURL } from '../util/tmp.js';
+import { wrap } from '../middlewares/wrap';
 
 export default (db: Database): Router => {
   const router = Router();
@@ -17,7 +17,7 @@ export default (db: Database): Router => {
     ].join('\n'));
   });
 
-  router.get('/webfinger', (req, res) => {
+  router.get('/webfinger', wrap(async (req, res) => {
     const { resource } = req.query;
     if (typeof resource !== 'string') {
       res.status(400).send({ error: 'Invalid or missing resource query' });
@@ -36,25 +36,26 @@ export default (db: Database): Router => {
       return;
     }
 
-    const user = db.getUser(account);
+    const user = await db.loadUser(account);
     if (!user) {
       res.status(404).send({ error: 'User not found' });
       return;
     }
 
-    const url = getLocalUserURL(user);
+    const accountUrl = new URL(`./@${user.username}`, BASE_URL);
+    const url = user.getURL();
 
     res.send({
       subject: resource,
       aliases: [
-        `${BASE_URL}/@${account}`,
+        accountUrl,
         url,
       ],
       links: [
         {
           rel: 'http://webfinger.net/rel/profile-page',
           type: 'text/html',
-          href: `${BASE_URL}/@${account}`,
+          href: accountUrl,
         },
         {
           rel: 'self',
@@ -64,11 +65,11 @@ export default (db: Database): Router => {
         {
           rel: 'http://ostatus.org/schema/1.0/subscribe',
           // TODO(indutny): support this
-          template: `${BASE_URL}/authorize_interaction?uri={uri}`
+          template: new URL(`./authorize_interaction?uri={uri}`, BASE_URL),
         }
       ]
     });
-  });
+  }));
 
   return router;
 };

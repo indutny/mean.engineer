@@ -3,16 +3,16 @@ import type { Request, Response } from 'express';
 import type { Paginated } from '../db.js';
 
 export type PaginateOptions = Readonly<{
-  url: string;
+  url: URL;
   summary: string;
-  getData(page?: number): Paginated<string>;
+  getData(page?: number): Promise<Paginated<string>>;
 }>;
 
-export function paginate(
+export async function paginate(
   req: Request,
   res: Response,
   { url, summary, getData } : PaginateOptions,
-): void {
+): Promise<void> {
   const { page: pageString } = req.query;
 
   let page: number | undefined;
@@ -42,7 +42,7 @@ export function paginate(
     totalRows,
     rows,
     hasMore,
-  } = getData(dbPage);
+  } = await getData(dbPage);
 
   if (page === undefined) {
     res.status(200).type('application/activity+json').send({
@@ -50,18 +50,18 @@ export function paginate(
       type: 'OrderedCollection',
       summary,
       totalItems: totalRows,
-      first: totalRows > 0 ? `${url}?page=1` : undefined,
+      first: totalRows > 0 ? new URL('?page=1', url) : undefined,
     });
     return;
   }
 
   res.status(200).type('application/activity+json').send({
     '@context': 'https://www.w3.org/ns/activitystreams',
-    id: page === undefined ? url : `${url}?page=${page}`,
+    id: page === undefined ? url : new URL(`?page=${page}`, url),
     type: 'OrderedCollectionPage',
     totalItems: totalRows,
     partOf: url,
-    next: hasMore ? `${url}?page=${nextPage}` : undefined,
+    next: hasMore ? new URL(`?page=${nextPage}`, url) : undefined,
     orderedItems: rows,
   });
 }

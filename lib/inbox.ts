@@ -1,8 +1,8 @@
 import assert from 'assert';
 import { randomUUID } from 'crypto';
 
-import type { User, Database } from './db.js';
-import { getLocalUserURL } from './util/tmp.js';
+import type { Database } from './db.js';
+import type { User } from './models/user.js';
 import type { Activity } from './types/as.d';
 
 import { BASE_URL } from './config.js';
@@ -37,28 +37,26 @@ export class Inbox {
     user: User,
     follow: Activity,
   ): Promise<void> {
-    const { object } = follow;
-    const owner = getLocalUserURL(user);
+    const { object: objectString } = follow;
+    const object = new URL(objectString);
+    const owner = user.getURL();
     assert.strictEqual(
-      object,
-      owner,
+      object.toString(),
+      owner.toString(),
       'Invalid "object" field of Follow request'
     );
 
-    const { actor } = follow;
+    const actor = new URL(follow.actor);
 
-    let usedId: string | undefined;
+    await this.db.follow({
+      owner,
+      actor,
+    });
+
     try {
-      usedId = this.db.follow({
-        id: follow.id,
-        owner,
-        actor: follow.actor,
-      });
       await this.outbox.acceptFollow(user, follow);
     } catch (error) {
-      if (usedId !== undefined) {
-        this.db.unfollow({ id: usedId, owner, actor });
-      }
+      await this.db.unfollow({ owner, actor });
       throw error;
     }
   }
@@ -77,15 +75,15 @@ export class Inbox {
 
   private async handleUnfollow(user: User, activity: Activity): Promise<void> {
     const { object: follow } = activity;
+    const actor = new URL(activity.actor);
     assert.strictEqual(
       new URL(follow.id).origin,
-      new URL(activity.actor).origin,
+      actor.origin,
       'Cross-origin unfollow'
     );
-    this.db.unfollow({
-      id: follow.id,
-      actor: activity.actor,
-      owner: getLocalUserURL(user),
+    await this.db.unfollow({
+      actor,
+      owner: user.getURL(),
     });
   }
 }

@@ -6,6 +6,7 @@ import createDebug from 'debug';
 
 import { compact } from '../util/jsonld.js';
 import { USER_AGENT } from '../config.js';
+import { wrap } from './wrap';
 
 const debug = createDebug('me:verify-signature');
 
@@ -136,7 +137,7 @@ export default function verifySignature(
 ): RequestHandler {
   const v = new Verifier();
 
-  return async (req, res, next) => {
+  return wrap(async (req, res, next) => {
     try {
       req.senderKey = await v.verify(req);
     } catch (error) {
@@ -147,5 +148,5 @@ export default function verifySignature(
     }
 
     next();
-  };
+  });
 }

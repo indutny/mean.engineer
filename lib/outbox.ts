@@ -4,10 +4,10 @@ import { createHash, createSign, randomUUID } from 'crypto';
 import createDebug from 'debug';
 
 import { USER_AGENT, BASE_URL } from './config.js';
-import type { User, Database } from './db.js';
+import type { Database } from './db.js';
+import type { User } from './models/user.js';
 import type { Activity } from './types/as.d';
 import { compact } from './util/jsonld.js';
-import { getLocalUserURL } from './util/tmp.js';
 
 const debug = createDebug('me:outbox');
 
@@ -34,16 +34,19 @@ export class Outbox {
   }
 
   public async acceptFollow(user: User, follow: Activity): Promise<void> {
+    const us = user.getURL();
     const body = {
       id: `${BASE_URL}/${randomUUID()}`,
       type: 'Accept',
-      actor: getLocalUserURL(user),
+      actor: us,
       object: follow,
     };
 
-    debug(`accepting follow ${user.name} <- ${follow.actor}`);
-    await this.send(user, follow.actor, body);
-    debug(`accepted follow ${user.name} <- ${follow.actor}`);
+    const target = new URL(follow.actor);
+
+    debug(`accepting follow ${us} <- ${target}`);
+    await this.send(user, target, body);
+    debug(`accepted follow ${us} <- ${target}`);
   }
 
   //
@@ -52,7 +55,7 @@ export class Outbox {
 
   private async send(
     user: User,
-    target: string,
+    target: URL,
     body: Record<string, unknown>,
   ): Promise<void> {
     const json = JSON.stringify({
@@ -81,7 +84,7 @@ export class Outbox {
       .sign(user.privateKey)
       .toString('base64');
 
-    const keyId = `${getLocalUserURL(user)}#main-key`;
+    const keyId = `${user.getURL()}#main-key`;
 
     const headers = {
       date,
@@ -104,6 +107,7 @@ export class Outbox {
       headers,
     );
 
+    // TODO(indutny): invalidate cache on failure and retry?
     const res = await fetch(inbox, {
       method: 'POST',
       headers,
@@ -119,8 +123,9 @@ export class Outbox {
     }
   }
 
-  private async getInbox(target: string): Promise<string> {
-    const cached = this.inboxCache.get(target);
+  private async getInbox(target: URL): Promise<string> {
+    const cacheKey = target.toString();
+    const cached = this.inboxCache.get(cacheKey);
     if (cached) {
       return cached;
     }
@@ -137,7 +142,7 @@ export class Outbox {
     assert.strictEqual(type, 'Person', 'Invalid actor type');
     assert.strictEqual(typeof inbox, 'string', 'Missing inbox field');
 
-    this.inboxCache.set(target, inbox);
+    this.inboxCache.set(cacheKey, inbox);
 
     return inbox;
   }

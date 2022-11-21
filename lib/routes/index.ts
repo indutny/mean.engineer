@@ -1,7 +1,8 @@
 import { Router } from 'express';
 
 import type { Inbox } from '../inbox.js';
-import type { User, Database } from '../db.js';
+import type { Database } from '../db.js';
+import type { User } from '../models/user.js';
 
 import mastodon from './mastodon.js';
 import webfinger from './webfinger.js';

@@ -3,23 +3,7 @@ import NativeConstructor from 'better-sqlite3';
 import type { Database as Native } from 'better-sqlite3';
 
 import { BASE_URL, DB_PATH, DB_PAGE_SIZE } from './config.js';
-
-export type User = Readonly<{
-  name: string;
-  profileName: string;
-  summary: string;
-  privateKey: string;
-  publicKey: string;
-  createdAt: number;
-}>;
-
-export type CreateUserOptions = Readonly<{
-  name: string;
-  profileName: string;
-  summary: string;
-  publicKey?: string;
-  privateKey?: string;
-}>;
+import { User } from './models/user.js';
 
 export type Paginated<Row> = Readonly<{
   totalRows: number;
@@ -28,15 +12,13 @@ export type Paginated<Row> = Readonly<{
 }>;
 
 export type FollowOptions = Readonly<{
-  id?: string;
-  owner: string;
-  actor: string;
+  owner: URL;
+  actor: URL;
 }>;
 
 export type UnfollowOptions = Readonly<{
-  id?: string;
-  owner: string;
-  actor: string;
+  owner: URL;
+  actor: URL;
 }>;
 
 type PaginateOptions = Readonly<{
@@ -73,72 +55,78 @@ export class Database {
   // Users
   //
 
-  public createUser(user: CreateUserOptions): void {
+  public async saveUser(user: User): Promise<void> {
     this.db.prepare(`
-      INSERT INTO users
+      INSERT OR REPLACE INTO users
       (name, profileName, summary, privateKey, publicKey, createdAt)
       VALUES
       ($name, $profileName, $summary, $privateKey, $publicKey, $createdAt)
     `).run({
-      ...generateKeyPairSync('rsa', {
-        modulusLength: 2048,
-        publicKeyEncoding: { type: 'spki', format: 'pem' },
-        privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-      }),
-      ...user,
-      createdAt: Date.now(),
+      ...user.toColumns(),
     });
   }
 
-  public getUser(name: string): User | undefined {
+  public async loadUser(username: string): Promise<User | undefined> {
     // TODO(indutny): cache statement
-    return this.db
-      .prepare('SELECT * FROM users WHERE name = $name')
-      .get({ name });
+    const columns = this.db
+      .prepare('SELECT * FROM users WHERE username = $username')
+      .get({ username });
+    if (!columns) {
+      return undefined;
+    }
+
+    return User.fromColumns(columns);
   }
 
   //
   // Followers
   //
 
-  public follow({
-    id = `${BASE_URL}/${randomUUID()}`,
+  public async follow({
     owner,
     actor,
-  }: FollowOptions): string {
+  }: FollowOptions): Promise<void> {
     // TODO(indutny): cache statement
     this.db.prepare(`
-      INSERT INTO followers
-      (id, owner, actor, createdAt)
+      INSERT OR REPLACE INTO followers
+      (owner, actor, createdAt)
       VALUES
-      ($id, $owner, $actor, $createdAt)
-    `).run({ id, owner, actor, createdAt: Date.now() });
-
-    return id;
+      ($owner, $actor, $createdAt)
+    `).run({
+      owner: owner.toString(),
+      actor: actor.toString(),
+      createdAt: Date.now(),
+    });
   }
 
-  public unfollow({ id, owner, actor }: UnfollowOptions): void {
+  public async unfollow({ owner, actor }: UnfollowOptions): Promise<void> {
     // TODO(indutny): cache statement
     this.db.prepare(`
       DELETE FROM followers
-      WHERE id IS $id OR (owner IS $owner AND actor IS $actor)
-    `).run({ id: id ?? null, owner, actor });
+      WHERE owner IS $owner AND actor IS $actor
+    `).run({ owner: owner.toString(), actor: actor.toString() });
   }
 
-  public getFollowers(owner: string, page?: number): Paginated<string> {
+  public async getFollowers(
+    owner: URL,
+    page?: number,
+  ): Promise<Paginated<string>> {
     return this.paginate(`
       SELECT <COLUMNS> FROM followers
       WHERE owner = $owner
       ORDER BY createdAt DESC
-    `, 'actor', { owner }, { page, pluck: true });
+    `, 'actor', { owner: owner.toString() }, { page, pluck: true });
   }
 
-  public getFollowing(actor: string, page?: number): Paginated<string> {
+  public async getFollowing(
+    actor: URL,
+    page?: number,
+  ): Promise<Paginated<string>> {
     return this.paginate(`
       SELECT <COLUMNS> FROM followers
       WHERE actor = $actor
       ORDER BY createdAt DESC
-    `, 'owner', { actor }, { page, pluck: true });
+    `, 'owner', { actor: actor.toString() }, { page, pluck: true });
   }
 
   //
@@ -191,12 +179,16 @@ export class Database {
     (db) => {
       db.exec(`
         CREATE TABLE users (
-          name STRING PRIMARY KEY,
-          profileName STRING NON NULL,
-          summary STRING NON NULL,
+          username STRING PRIMARY KEY,
+          passwordHash BLOB NON NULL,
+          passwordSalt BLOB NON NULL,
+          passwordIterations INTEGER NON NULL,
           privateKey STRING NON NULL,
           publicKey STRING NON NULL,
-          createdAt INTEGER NON NULL
+          createdAt INTEGER NON NULL,
+
+          profileName STRING NON NULL,
+          about STRING NON NULL
         );
 
         CREATE TABLE followers (

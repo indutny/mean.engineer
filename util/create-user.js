@@ -1,16 +1,9 @@
-import { readFileSync } from 'fs';
 import { Database } from '../lib/db.js';
+import { User } from '../lib/models/user.js';
 const db = new Database();
-function maybeFile(name) {
-    if (!name) {
-        return undefined;
-    }
-    return readFileSync(name).toString();
-}
-db.createUser({
-    name: process.argv[2],
-    profileName: process.argv[3],
-    summary: process.argv[4],
-    privateKey: maybeFile(process.argv[5]),
-    publicKey: maybeFile(process.argv[6]),
-});
+await db.saveUser(await User.create({
+    username: process.argv[2],
+    password: process.argv[3],
+    profileName: process.argv[4],
+    about: process.argv[5],
+}));

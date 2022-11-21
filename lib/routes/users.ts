@@ -3,8 +3,8 @@ import { Router } from 'express';
 import createDebug from 'debug';
 
 import { compact } from '../util/jsonld.js';
-import { getLocalUserURL } from '../util/tmp.js';
 import verifySignature from '../middlewares/verify-signature.js';
+import { wrap } from '../middlewares/wrap';
 import type { Database } from '../db.js';
 import type { Inbox } from '../inbox.js';
 import { paginate } from './util.js';
@@ -14,8 +14,8 @@ const debug = createDebug('me:routes:users');
 export default (db: Database, inbox: Inbox): Router => {
   const router = Router();
 
-  router.param('user', (req, res, next, name) => {
-    req.user = db.getUser(name);
+  router.param('user', wrap(async (req, res, next, name) => {
+    req.user = await db.loadUser(name);
 
     if (!req.user) {
       res.status(404).send({ error: 'user not found' });
@@ -23,11 +23,11 @@ export default (db: Database, inbox: Inbox): Router => {
     }
 
     next();
-  });
+  }));
 
   router.use(verifySignature());
 
-  router.use(async (req, res, next) => {
+  router.use((req, res, next) => {
     if (req.method === 'POST') {
       if (!req.is('application/activity+json')) {
         res.status(400).send({ error: 'Bad content-type' });
@@ -56,39 +56,35 @@ export default (db: Database, inbox: Inbox): Router => {
     next();
   });
 
-  router.use(async (req, res, next) => {
+  router.use(wrap(async (req, res, next) => {
     if (req.method === 'GET' || req.method === 'HEAD') {
       next();
       return;
     }
 
-    try {
-      req.body = await compact(req.body);
-    } catch (error) {
-      debug('Failed to compact JSON-LD', error);
-      res.status(400).send({ error: 'Bad input' });
-      return;
-    }
+    req.body = await compact(req.body);
     next();
-  });
+  }));
 
   router.get('/:user', (req, res) => {
     const { user } = req;
     assert(user, 'Must have user');
 
-    const url = getLocalUserURL(user);
+    const url = user.getURL();
 
     res.type('application/activity+json').send({
       '@context': 'https://www.w3.org/ns/activitystreams',
       id: url,
       type: 'Person',
-      following: `${url}/following`,
-      followers: `${url}/followers`,
-      inbox: `${url}/inbox`,
-      outbox: `${url}/outbox`,
-      preferredUsername: user.name,
+      following: new URL('./following', url),
+      followers: new URL('./followers', url),
+      inbox: new URL('./inbox', url),
+      outbox: new URL('./outbox', url),
+      preferredUsername: user.username,
       name: user.profileName,
-      summary: user.summary,
+      summary: user.about,
+
+      // TODO(indutny): shared inbox
 
       publicKey: {
         id: `${url}#main-key`,
@@ -98,33 +94,37 @@ export default (db: Database, inbox: Inbox): Router => {
     });
   });
 
-  router.get('/:user/outbox', async (req, res) => {
+  router.get('/:user/outbox', (req, res) => {
     res.status(500).send({ error: 'not implemented' });
   });
 
-  router.get('/:user/followers', async (req, res) => {
+  router.get('/:user/followers', wrap(async (req, res) => {
     const { user } = req;
     assert(user, 'Must have user');
 
-    paginate(req, res, {
-      url: `${getLocalUserURL(user)}/followers`,
+    const userURL = user.getURL();
+
+    await paginate(req, res, {
+      url: new URL('./followers', userURL),
       summary: `${user.profileName}'s followers`,
-      getData: (page) => db.getFollowers(getLocalUserURL(user), page),
+      getData: (page) => db.getFollowers(userURL, page),
     });
-  });
+  }));
 
-  router.get('/:user/following', async (req, res) => {
+  router.get('/:user/following', wrap(async (req, res) => {
     const { user } = req;
     assert(user, 'Must have user');
 
-    paginate(req, res, {
-      url: `${getLocalUserURL(user)}/following`,
-      summary: `${user.profileName}'s following`,
-      getData: (page) => db.getFollowing(getLocalUserURL(user), page),
-    });
-  });
+    const userURL = user.getURL();
 
-  router.post('/:user/inbox', async (req, res) => {
+    await paginate(req, res, {
+      url: new URL('./following', userURL),
+      summary: `${user.profileName}'s following`,
+      getData: (page) => db.getFollowing(userURL, page),
+    });
+  }));
+
+  router.post('/:user/inbox', wrap(async (req, res) => {
     if (!req.senderKey) {
       res.status(401).send({ error: 'Signature is required' });
       return;
@@ -153,7 +153,7 @@ export default (db: Database, inbox: Inbox): Router => {
       debug('failed to handle activity %j %j', req.body, error.stack);
       res.status(500).send({ error: error.message });
     }
-  });
+  }));
 
   return router;
 };
