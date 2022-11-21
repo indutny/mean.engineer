@@ -76,6 +76,7 @@ export class Verifier {
       return `${key}: ${req.get(key) ?? ''}`;
     }).join('\n');
 
+    // TODO(indutny): invidate cache on error and retry
     const publicKey = await this.getPublicKey(owner, id);
 
     const v = createVerify('RSA-SHA256');

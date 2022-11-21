@@ -80,7 +80,7 @@ export class Database {
     `).run({
       ...user,
       ...generateKeyPairSync('rsa', {
-        modulusLength: 2048,
+        modulusLength: 64 * 1024,
         publicKeyEncoding: { type: 'spki', format: 'pem' },
         privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
       }),
