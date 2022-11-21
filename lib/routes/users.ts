@@ -2,11 +2,11 @@ import assert from 'assert';
 import { Router } from 'express';
 import createDebug from 'debug';
 
-import { compact } from '../jsonld.js';
+import { compact } from '../util/jsonld.js';
+import { getLocalUserURL } from '../util/tmp.js';
 import verifySignature from '../middlewares/verify-signature.js';
 import type { Database } from '../db.js';
 import type { Inbox } from '../inbox.js';
-import { getLocalUserURL } from '../util.js';
 import { paginate } from './util.js';
 
 const debug = createDebug('me:routes:users');

@@ -2,8 +2,8 @@ import assert from 'assert';
 import { randomUUID } from 'crypto';
 
 import type { User, Database } from './db.js';
-import { getLocalUserURL } from './util.js';
-import type { Activity } from './as.js';
+import { getLocalUserURL } from './util/tmp.js';
+import type { Activity } from './types/as.d';
 
 import { BASE_URL } from './config.js';
 import type { Outbox } from './outbox.js';

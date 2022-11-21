@@ -4,7 +4,7 @@ import LRU from 'lru-cache';
 import type { Request, RequestHandler } from 'express';
 import createDebug from 'debug';
 
-import { compact } from '../jsonld.js';
+import { compact } from '../util/jsonld.js';
 import { USER_AGENT } from '../config.js';
 
 const debug = createDebug('me:verify-signature');

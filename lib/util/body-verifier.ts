@@ -3,9 +3,9 @@ import { createHash, timingSafeEqual } from 'crypto';
 import type { Request, Response } from 'express';
 import createDebug from 'debug';
 
-const debug = createDebug('me:verifyBody');
+const debug = createDebug('me:bodyVerifier');
 
-export function verifyBody(req: Request, res: Response, body: Buffer): void {
+export function bodyVerifier(req: Request, res: Response, body: Buffer): void {
   const digest = req.get('digest');
   if (!digest) {
     return;

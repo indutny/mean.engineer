@@ -5,9 +5,9 @@ import createDebug from 'debug';
 
 import { USER_AGENT, BASE_URL } from './config.js';
 import type { User, Database } from './db.js';
-import type { Activity } from './as.js';
-import { compact } from './jsonld.js';
-import { getLocalUserURL } from './util.js';
+import type { Activity } from './types/as.d';
+import { compact } from './util/jsonld.js';
+import { getLocalUserURL } from './util/tmp.js';
 
 const debug = createDebug('me:outbox');
 

@@ -1,11 +1,11 @@
 import express from 'express';
 import fs from 'fs';
 
-import { Database } from './db.js';
-import { Inbox } from './inbox.js';
-import { Outbox } from './outbox.js';
-import routes from './routes/index.js';
-import { verifyBody } from './middlewares/verify-body.js';
+import { Database } from './lib/db.js';
+import { Inbox } from './lib/inbox.js';
+import { Outbox } from './lib/outbox.js';
+import routes from './lib/routes/index.js';
+import { bodyVerifier } from './lib/util/body-verifier.js';
 
 const db = new Database();
 
@@ -22,9 +22,9 @@ const inbox = new Inbox({
 
 app.use(express.json({
   type: ['application/json', 'application/activity+json'],
-  verify: verifyBody,
+  verify: bodyVerifier,
 }));
-app.use(express.urlencoded({ extended: false, verify: verifyBody }));
+app.use(express.urlencoded({ extended: false, verify: bodyVerifier }));
 
 app.all('*', function (req, res, next) {
   console.log(req.method, req.headers, req.url, req.body);

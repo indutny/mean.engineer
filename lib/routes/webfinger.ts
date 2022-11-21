@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import { BASE_URL, HOST } from '../config.js';
 import type { Database } from '../db.js';
-import { getLocalUserURL } from '../util.js';
+import { getLocalUserURL } from '../util/tmp.js';
 
 export default (db: Database): Router => {
   const router = Router();

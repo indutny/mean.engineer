@@ -14,7 +14,7 @@ export const SERVER_DESCRIPTION = 'Private Server';
 
 export const SERVER_VERSION = '4.0.0';
 
-export const EMAIL = 'dednull@mean.engineer';
+export const EMAIL = 'devnull@mean.engineer';
 
 export const SERVER_LANGUAGES = ['en'];
 
