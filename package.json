@@ -8,6 +8,7 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "start": "node .",
+    "lint": "eslint **/*.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Fedor Indutny <238531+indutny@users.noreply.github.com>",
@@ -25,6 +26,9 @@
     "@types/debug": "^4.1.7",
     "@types/express": "^4.17.14",
     "@types/jsonld": "^1.5.7",
-    "@types/node": "^18.11.9"
+    "@types/node": "^18.11.9",
+    "@typescript-eslint/eslint-plugin": "^5.43.0",
+    "@typescript-eslint/parser": "^5.43.0",
+    "eslint": "^8.28.0"
   }
 }

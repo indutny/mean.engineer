@@ -1,8 +1,7 @@
-import { randomUUID, generateKeyPairSync } from 'crypto';
 import NativeConstructor from 'better-sqlite3';
 import type { Database as Native } from 'better-sqlite3';
 
-import { BASE_URL, DB_PATH, DB_PAGE_SIZE } from './config.js';
+import { DB_PATH, DB_PAGE_SIZE } from './config.js';
 import { User } from './models/user.js';
 
 export type Paginated<Row> = Readonly<{
@@ -30,7 +29,7 @@ export class Database {
   private readonly db: Native;
 
   constructor(path = DB_PATH) {
-    const db = new NativeConstructor(DB_PATH);
+    const db = new NativeConstructor(path);
 
     db.pragma('journal_mode = WAL');
 

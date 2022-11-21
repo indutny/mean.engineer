@@ -1,5 +1,3 @@
-import { readFileSync } from 'fs';
-
 import { Database } from '../lib/db.js';
 import { User } from '../lib/models/user.js';
 

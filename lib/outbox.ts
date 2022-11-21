@@ -138,6 +138,7 @@ export class Outbox {
     });
 
     const json = await res.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { type, inbox } = (await compact(json)) as any;
     assert.strictEqual(type, 'Person', 'Invalid actor type');
     assert.strictEqual(typeof inbox, 'string', 'Missing inbox field');

@@ -1,11 +1,9 @@
 import assert from 'assert';
-import { randomUUID } from 'crypto';
 
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import type { Activity } from './types/as.d';
 
-import { BASE_URL } from './config.js';
 import type { Outbox } from './outbox.js';
 
 export type InboxOptions = Readonly<{
