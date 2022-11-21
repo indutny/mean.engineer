@@ -57,9 +57,11 @@ export class Database {
   public async saveUser(user: User): Promise<void> {
     this.db.prepare(`
       INSERT OR REPLACE INTO users
-      (name, profileName, summary, privateKey, publicKey, createdAt)
+      (username, passwordHash, passwordSalt, passwordIterations,
+       privateKey, publicKey, createdAt, profileName, about)
       VALUES
-      ($name, $profileName, $summary, $privateKey, $publicKey, $createdAt)
+      ($username, $passwordHash, $passwordSalt, $passwordIterations,
+       $privateKey, $publicKey, $createdAt, $profileName, $about)
     `).run({
       ...user.toColumns(),
     });
@@ -191,26 +193,23 @@ export class Database {
         );
 
         CREATE TABLE followers (
-          id STRING PRIMARY KEY,
           owner STRING NON NULL,
           actor STRING NON NULL,
           createdAt INTEGER NON NULL,
 
-          UNIQUE (owner, actor)
+          PRIMARY KEY (owner, actor)
         );
 
         CREATE INDEX followers_by_owner ON followers (owner, createdAt ASC);
         CREATE INDEX followers_by_actor ON followers (actor, createdAt ASC);
-        CREATE INDEX followers_by_owner_and_actor ON followers (owner, actor);
 
         CREATE TABLE likes (
-          id STRING PRIMARY KEY,
           owner STRING NON NULL,
           post STRING NON NULL,
           actor STRING NON NULL,
           createdAt INTEGER NON NULL,
 
-          UNIQUE (owner, post, actor)
+          PRIMARY KEY (owner, post, actor)
         );
 
         CREATE INDEX likes_by_post ON likes (post, createdAt ASC);
@@ -219,7 +218,9 @@ export class Database {
           id STRING NON NULL,
           owner STRING NON NULL,
           content STRING NON NULL,
-          createdAt INTEGER NON NULL
+          createdAt INTEGER NON NULL,
+
+          PRIMARY KEY (owner, id)
         );
 
         CREATE INDEX posts_by_owner ON posts (owner, createdAt ASC);
