@@ -109,6 +109,7 @@ export class Outbox {
       headers,
       body: json,
     });
+    debug('got response', res.status, res.headers);
     if (res.status < 200 || res.status >= 300) {
       const reason = await res.text();
       throw new Error(
