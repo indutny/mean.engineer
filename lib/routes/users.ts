@@ -76,10 +76,10 @@ export default (db: Database, inbox: Inbox): Router => {
       '@context': 'https://www.w3.org/ns/activitystreams',
       id: url,
       type: 'Person',
-      following: new URL('./following', url),
-      followers: new URL('./followers', url),
-      inbox: new URL('./inbox', url),
-      outbox: new URL('./outbox', url),
+      following: `${url}/following`,
+      followers: `${url}/followers`,
+      inbox: `${url}/inbox`,
+      outbox: `${url}/outbox`,
       preferredUsername: user.username,
       name: user.profileName,
       summary: user.about,
@@ -105,7 +105,7 @@ export default (db: Database, inbox: Inbox): Router => {
     const userURL = user.getURL();
 
     await paginate(req, res, {
-      url: new URL('./followers', userURL),
+      url: new URL(`${userURL}/followers`),
       summary: `${user.profileName}'s followers`,
       getData: (page) => db.getFollowers(userURL, page),
     });
@@ -118,7 +118,7 @@ export default (db: Database, inbox: Inbox): Router => {
     const userURL = user.getURL();
 
     await paginate(req, res, {
-      url: new URL('./following', userURL),
+      url: new URL(`${userURL}/following`),
       summary: `${user.profileName}'s following`,
       getData: (page) => db.getFollowing(userURL, page),
     });
