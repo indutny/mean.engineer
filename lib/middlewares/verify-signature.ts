@@ -6,7 +6,7 @@ import createDebug from 'debug';
 
 import { compact } from '../util/jsonld.js';
 import { USER_AGENT } from '../config.js';
-import { wrap } from './wrap';
+import { wrap } from './wrap.js';
 
 const debug = createDebug('me:verify-signature');
 

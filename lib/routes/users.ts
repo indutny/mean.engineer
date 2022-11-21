@@ -4,7 +4,7 @@ import createDebug from 'debug';
 
 import { compact } from '../util/jsonld.js';
 import verifySignature from '../middlewares/verify-signature.js';
-import { wrap } from '../middlewares/wrap';
+import { wrap } from '../middlewares/wrap.js';
 import type { Database } from '../db.js';
 import type { Inbox } from '../inbox.js';
 import { paginate } from './util.js';
