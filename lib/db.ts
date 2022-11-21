@@ -17,6 +17,8 @@ export type CreateUserOptions = Readonly<{
   name: string;
   profileName: string;
   summary: string;
+  publicKey?: string;
+  privateKey?: string;
 }>;
 
 export type Paginated<Row> = Readonly<{
@@ -78,12 +80,12 @@ export class Database {
       VALUES
       ($name, $profileName, $summary, $privateKey, $publicKey, $createdAt)
     `).run({
-      ...user,
       ...generateKeyPairSync('rsa', {
-        modulusLength: 64 * 1024,
+        modulusLength: 2048,
         publicKeyEncoding: { type: 'spki', format: 'pem' },
         privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
       }),
+      ...user,
       createdAt: Date.now(),
     });
   }
