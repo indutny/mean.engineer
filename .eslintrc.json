@@ -6,6 +6,7 @@
   "ignorePatterns": ["**/*.js"],
   "extends": [
     "eslint:recommended",
+    "plugin:import/recommended",
     "plugin:@typescript-eslint/recommended"
   ],
   "overrides": [
@@ -43,6 +44,11 @@
     "max-len": [
       "error",
       80
+    ],
+    "import/extensions": [
+      "error",
+      "always",
+      { "ts": "never" }
     ]
   }
 }

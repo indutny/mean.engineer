@@ -4,7 +4,7 @@ import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import type { Activity } from './types/as';
 import type { Outbox } from './outbox.js';
-import { isSameOrigin } from './util/isSameOrigin';
+import { isSameOrigin } from './util/isSameOrigin.js';
 
 export type InboxOptions = Readonly<{
   outbox: Outbox;
