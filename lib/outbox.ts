@@ -252,8 +252,6 @@ export class Outbox {
           `reason: ${reason}`
       );
     }
-
-    debug(`job ${id} got response data`, await res.json());
   }
 
   private async getInboxes(
