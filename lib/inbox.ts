@@ -5,7 +5,7 @@ import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import type { Activity } from './types/as';
 import type { Outbox } from './outbox.js';
-import { isSameOrigin } from './util/isSameOrigin.js';
+import { isSameHost } from './util/isSameHost.js';
 
 const debug = createDebug('me:inbox');
 
@@ -85,8 +85,8 @@ export class Inbox {
     const follow = activity.object as Activity;
     const actor = new URL(activity.actor);
     assert(
-      isSameOrigin(new URL(follow.id), actor),
-      'Cross-origin unfollow'
+      !follow.id || isSameHost(new URL(follow.id), actor),
+      `Cross-origin unfollow follow=${follow.id} actor=${actor}`
     );
     await this.db.unfollow({
       actor,

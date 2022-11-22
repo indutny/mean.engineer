@@ -5,7 +5,7 @@ import cors from 'cors';
 
 import { compact } from '../util/jsonld.js';
 import { paginateResponse } from '../util/paginateResponse.js';
-import { isSameOrigin } from '../util/isSameOrigin.js';
+import { isSameHost } from '../util/isSameHost.js';
 import verifySignature from '../middlewares/verifySignature.js';
 import { wrap } from '../middlewares/wrap.js';
 import type { User } from '../models/user.js';
@@ -185,7 +185,7 @@ export default ({ db, inbox, outbox }: UsersOptions): Router => {
     }
 
     // Can't squat others ids!
-    if (id && isSameOrigin(new URL(id), new URL(actor))) {
+    if (id && !isSameHost(new URL(id), new URL(actor))) {
       debug('invalid activity origin body=%O', req.body);
       res.status(400).send({ error: 'Invalid activity origin' });
       return;
