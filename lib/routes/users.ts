@@ -173,14 +173,19 @@ export default ({ db, inbox, outbox }: UsersOptions): Router => {
     const { targetUser } = req;
     assert(targetUser, 'Must have targetUser');
 
-    const { id, actor } = req.body;
+    type Body = Readonly<{
+      id: string;
+      actor: string;
+    }>;
+
+    const { id, actor } = req.body as Body;
     if (req.senderKey.owner !== actor) {
       res.status(403).send({ error: 'Signature does not match actor' });
       return;
     }
 
     // Can't squat others ids!
-    if (id && isSameOrigin(id, actor)) {
+    if (id && isSameOrigin(new URL(id), new URL(actor))) {
       debug('invalid activity id=%j actor=%j', id, req.body.actor);
       res.status(400).send({ error: 'Invalid activity id' });
       return;
@@ -190,7 +195,7 @@ export default ({ db, inbox, outbox }: UsersOptions): Router => {
       await inbox.handleActivity(targetUser, req.body);
       res.status(202).send();
     } catch (error) {
-      debug('failed to handle activity %j %j', req.body, error.stack);
+      debug('failed to handle activity %j %O', req.body, error);
       res.status(500).send({ error: error.message });
     }
   }));

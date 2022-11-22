@@ -57,8 +57,8 @@ export class Outbox {
         this.onJob(job);
       } catch (error) {
         debug(
-          `failed to run persisted job ${job.getDebugId()} error=%j`,
-          error.stack,
+          `failed to run persisted job ${job.getDebugId()} error=%O`,
+          error,
         );
       }
     }
@@ -163,8 +163,8 @@ export class Outbox {
           return;
         } catch (error) {
           debug(
-            `outbox job ${job.getDebugId()} failed error=%j`,
-            error.stack,
+            `outbox job ${job.getDebugId()} failed error=%O`,
+            error,
           );
 
           const delay = incrementalBackoff(attempts);
@@ -295,7 +295,7 @@ export class Outbox {
 
       return urls;
     } catch (error) {
-      debug('getInbox got error=%j', error.stack);
+      debug('getInbox got error=%O', error);
       return [];
     }
   }

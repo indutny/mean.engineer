@@ -1,10 +1,13 @@
 import assert from 'assert';
+import createDebug from 'debug';
 
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import type { Activity } from './types/as';
 import type { Outbox } from './outbox.js';
 import { isSameOrigin } from './util/isSameOrigin.js';
+
+const debug = createDebug('me:inbox');
 
 export type InboxOptions = Readonly<{
   outbox: Outbox;
@@ -21,6 +24,8 @@ export class Inbox {
   }
 
   public async handleActivity(user: User, activity: Activity): Promise<void> {
+    debug('handleActivity %O', activity);
+
     const { type } = activity;
     if (type === 'Follow') {
       return this.handleFollowRequest(user, activity);
