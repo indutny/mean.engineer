@@ -1,11 +1,20 @@
+import { randomBytes } from 'crypto';
+
+const ID_LEN = 16;
+
 export type OutboxJobAttributes = Readonly<{
-  id: number;
+  id: Buffer;
   actor: string;
   target: URL;
   data: Record<string, unknown>;
   attempts: number;
   createdAt: Date;
 }>;
+
+export type NewOutboxJobAttributes = Omit<
+  OutboxJobAttributes,
+  'id' | 'createdAt'
+>;
 
 export type OutboxJobColumns = Omit<
   OutboxJobAttributes,
@@ -17,7 +26,7 @@ export type OutboxJobColumns = Omit<
 }>;
 
 export class OutboxJob {
-  public readonly id: number;
+  public readonly id: Buffer;
   public readonly actor: string;
   public readonly target: URL;
   public readonly data: Record<string, unknown>;
@@ -44,6 +53,14 @@ export class OutboxJob {
       createdAt: this.createdAt.getTime(),
       data: JSON.stringify(this.data),
     };
+  }
+
+  public static create(attributes: NewOutboxJobAttributes): OutboxJob {
+    return new OutboxJob({
+      ...attributes,
+      id: randomBytes(ID_LEN),
+      createdAt: new Date(),
+    });
   }
 
   public static fromColumns({

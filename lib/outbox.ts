@@ -7,7 +7,7 @@ import { setTimeout as sleep } from 'timers/promises';
 import { USER_AGENT, BASE_URL, MAX_OUTBOX_JOB_ATTEMPTS } from './config.js';
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
-import type { OutboxJob } from './models/outboxJob.js';
+import { OutboxJob } from './models/outboxJob.js';
 import type { Activity } from './types/as.d';
 import { incrementalBackoff } from './util/incrementalBackoff.js';
 import { compact } from './util/jsonld.js';
@@ -74,13 +74,13 @@ export class Outbox {
     target: URL,
     data: OutboxJob['data'],
   ): Promise<void> {
-    const job = await this.db.createOutboxJob({
+    const job = OutboxJob.create({
       actor: actor.username,
       target,
       data,
       attempts: 0,
-      createdAt: new Date(),
     });
+    await this.db.saveOutboxJob(job);
 
     this.onJob(job);
   }

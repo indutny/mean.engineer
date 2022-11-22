@@ -4,7 +4,7 @@ import type { Database as Native } from 'better-sqlite3';
 import { DB_PATH, DB_PAGE_SIZE } from './config.js';
 import { User } from './models/user.js';
 import { AuthToken } from './models/authToken.js';
-import { OutboxJob, type OutboxJobAttributes } from './models/outboxJob.js';
+import { OutboxJob } from './models/outboxJob.js';
 
 export type Paginated<Row> = Readonly<{
   totalRows: number;
@@ -165,26 +165,13 @@ export class Database {
   // Outbox Jobs
   //
 
-  public async createOutboxJob(
-    attributes: Omit<OutboxJobAttributes, 'id'>,
-  ): Promise<OutboxJob> {
-    const id = this.db.prepare(`
+  public async saveOutboxJob(job: OutboxJob): Promise<void> {
+    this.db.prepare(`
       INSERT INTO outboxJobs
       (actor, target, data, attempts, createdAt)
       VALUES
       ($actor, $target, $data, $attempts, $createdAt)
-      RETURNING id
-    `).pluck().get({
-      ...attributes,
-      target: attributes.target.toString(),
-      data: JSON.stringify(attributes.data),
-      createdAt: attributes.createdAt.getTime(),
-    });
-
-    return new OutboxJob({
-      ...attributes,
-      id,
-    });
+    `).pluck().get(job.toColumns());
   }
 
   public async getOutboxJobs(): Promise<ReadonlyArray<OutboxJob>> {
@@ -305,7 +292,7 @@ export class Database {
         (username, title);
 
         CREATE TABLE outboxJobs (
-          id INTEGER PRIMARY KEY,
+          id BLOB PRIMARY KEY,
           actor STRING NON NULL REFERENCES users(username) ON DELETE CASCADE,
           target STRING NON NULL,
           data STRING NON NULL,
