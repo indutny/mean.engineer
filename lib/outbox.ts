@@ -114,6 +114,9 @@ export class Outbox {
 
     // Deduplicate
     const uniqueInboxes = [...new Set(inboxes.flat())];
+    debug(
+      'got unique inboxes for %j, %j', data, uniqueInboxes
+    );
 
     await Promise.all(uniqueInboxes.map(
       inbox => this.queueJob(user, inbox, data),
