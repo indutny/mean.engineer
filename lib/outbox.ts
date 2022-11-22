@@ -95,6 +95,10 @@ export class Outbox {
       cc,
     } = data;
 
+    debug(
+      'sending activity %j to=%j cc=%j bto=%j bcc=%j', data, to, cc, bcc, bto,
+    );
+
     const targets = [bto, bcc, to, cc].flat()
       .filter((x: string | undefined): x is string => x !== undefined)
       .map(x => new URL(x));
