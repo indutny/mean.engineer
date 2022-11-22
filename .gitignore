@@ -2,3 +2,4 @@ node_modules/
 tsconfig.tsbuildinfo
 **/*.js
 db.sqlite*
+tokens.txt
