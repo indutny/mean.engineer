@@ -283,7 +283,7 @@ export class Outbox {
       const { type } = ld;
 
       // TODO(indutny): resolve collections
-      assert(ACTOR_TYPES.has(type), 'Invalid actor type');
+      assert(ACTOR_TYPES.has(type), `Invalid actor type ${type}`);
 
       const inbox = ld.endpoints?.sharedInbox || ld.inbox;
       assert.strictEqual(typeof inbox, 'string', 'Missing inbox field');
