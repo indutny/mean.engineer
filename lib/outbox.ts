@@ -102,7 +102,7 @@ export class Outbox {
         } catch (error) {
           debug(
             `outbox job ${currentJob.id} failed error=%j`,
-            error.stack,
+            error,
           );
 
           const delay = incrementalBackoff(currentJob.attempts);

@@ -143,7 +143,7 @@ export class Database {
       (username, target, data, attempts, createdAt)
       VALUES
       ($username, $target, $data, $attempts, $createdAt)
-      RETURNING rowid
+      RETURNING id
     `).pluck().get({
       ...attributes,
       username: attributes.user.username,
@@ -263,7 +263,7 @@ export class Database {
         );
 
         CREATE TABLE outboxJobs (
-          rowid INTEGER PRIMARY KEY,
+          id INTEGER PRIMARY KEY,
           username STRING NON NULL,
           target STRING NON NULL,
           data STRING NON NULL,
