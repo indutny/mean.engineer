@@ -1,6 +1,7 @@
 import assert from 'assert';
 import { Router } from 'express';
 import createDebug from 'debug';
+import cors from 'cors';
 
 import { compact } from '../util/jsonld.js';
 import { paginateResponse } from '../util/paginateResponse.js';
@@ -31,6 +32,8 @@ export type UsersOptions = Readonly<{
 
 export default ({ db, inbox, outbox }: UsersOptions): Router => {
   const router = Router();
+
+  router.use(cors());
 
   router.param('user', wrap(async (req, res, next, name) => {
     req.targetUser = await db.loadUser(name);

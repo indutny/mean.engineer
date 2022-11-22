@@ -1,4 +1,5 @@
 import express from 'express';
+import morgan from 'morgan';
 
 import { Database } from './lib/db.js';
 import { Inbox } from './lib/inbox.js';
@@ -27,10 +28,7 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: false, verify: bodyVerifier }));
 app.use(auth(db));
 
-app.all('*', function (req, res, next) {
-  console.log(req.method, req.headers, req.url, req.body);
-  next();
-});
+app.use(morgan('tiny'));
 
 app.use(routes({ inbox, outbox, db }));
 

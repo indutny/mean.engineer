@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import cors from 'cors';
 
 import { BASE_URL, HOST } from '../config.js';
 import type { Database } from '../db.js';
@@ -6,6 +7,8 @@ import { wrap } from '../middlewares/wrap.js';
 
 export default (db: Database): Router => {
   const router = Router();
+
+  router.use(cors());
 
   router.get('/host-meta', (req, res) => {
     res.type('application/xrd+xml; charset=utf-8').send([
