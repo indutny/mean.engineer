@@ -140,9 +140,9 @@ export class Database {
   ): Promise<OutboxJob> {
     const id = this.db.prepare(`
       INSERT INTO outboxJobs
-      (username, target, data, attempts, createdAt)
+      (actor, target, data, attempts, createdAt)
       VALUES
-      ($username, $target, $data, $attempts, $createdAt)
+      ($actor, $target, $data, $attempts, $createdAt)
       RETURNING id
     `).pluck().get({
       ...attributes,
@@ -262,7 +262,7 @@ export class Database {
 
         CREATE TABLE outboxJobs (
           id INTEGER PRIMARY KEY,
-          username STRING NON NULL,
+          actor STRING NON NULL,
           target STRING NON NULL,
           data STRING NON NULL,
           attempts INTEGER NON NULL,

@@ -1,6 +1,6 @@
 export type OutboxJobAttributes = Readonly<{
   id: number;
-  username: string;
+  actor: string;
   target: URL;
   data: Record<string, unknown>;
   attempts: number;
@@ -18,7 +18,7 @@ export type OutboxJobColumns = Omit<
 
 export class OutboxJob {
   public readonly id: number;
-  public readonly username: string;
+  public readonly actor: string;
   public readonly target: URL;
   public readonly data: Record<string, unknown>;
   public readonly attempts: number;
@@ -26,7 +26,7 @@ export class OutboxJob {
 
   constructor(attributes: OutboxJobAttributes) {
     this.id = attributes.id;
-    this.username = attributes.username;
+    this.actor = attributes.actor;
     this.target = attributes.target;
     this.data = attributes.data;
     this.attempts = attributes.attempts;

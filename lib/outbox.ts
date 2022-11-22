@@ -70,12 +70,12 @@ export class Outbox {
   //
 
   private async queueJob(
-    user: User,
+    actor: User,
     target: URL,
     data: OutboxJob['data'],
   ): Promise<void> {
     const job = await this.db.createOutboxJob({
-      username: user.username,
+      actor: actor.username,
       target,
       data,
       attempts: 0,
@@ -124,7 +124,7 @@ export class Outbox {
 
   private async runJob({
     id,
-    username,
+    actor: actorUsername,
     target,
     data,
   }: OutboxJob): Promise<void> {
@@ -133,12 +133,12 @@ export class Outbox {
       ...data,
     });
 
-    const [inbox, user] = await Promise.all([
+    const [inbox, actor] = await Promise.all([
       this.getInbox(target),
-      this.db.loadUser(username),
+      this.db.loadUser(actorUsername),
     ]);
-    if (!user) {
-      debug(`job ${id}: user ${username} no longer exists`);
+    if (!actor) {
+      debug(`job ${id}: user ${actorUsername} no longer exists`);
       return;
     }
 
@@ -158,10 +158,10 @@ export class Outbox {
 
     const signature = createSign('RSA-SHA256')
       .update(plaintext)
-      .sign(user.privateKey)
+      .sign(actor.privateKey)
       .toString('base64');
 
-    const keyId = `${user.getURL()}#main-key`;
+    const keyId = `${actor.getURL()}#main-key`;
 
     const headers = {
       date,
