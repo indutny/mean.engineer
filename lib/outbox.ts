@@ -92,6 +92,7 @@ export class Outbox {
       while (true) {
         try {
           currentJob = await this.db.incrementOutboxJobAttempts(currentJob);
+          console.error(currentJob);
           if (currentJob.attempts > MAX_OUTBOX_JOB_ATTEMPTS) {
             debug(`outbox job ${currentJob.id} ran out of attempts`);
             return;
