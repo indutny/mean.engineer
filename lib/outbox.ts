@@ -100,12 +100,16 @@ export class Outbox {
           await this.runJob(currentJob);
           return;
         } catch (error) {
-          const delay = incrementalBackoff(currentJob.attempts);
           debug(
             `outbox job ${currentJob.id} failed error=%j`,
             error,
           );
 
+          const delay = incrementalBackoff(currentJob.attempts);
+          debug(
+            `outbox job ${currentJob.id} waiting for %dms`,
+            delay,
+          );
           await sleep(delay);
         }
       }
