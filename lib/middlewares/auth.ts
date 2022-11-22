@@ -46,12 +46,15 @@ export function auth(db: Database): RequestHandler {
       return;
     }
 
-    if (isValid) {
-      req.user = await db.loadUser(token.username);
-      if (!req.user) {
-        res.status(403).send({ error: 'Incorrect token' });
-        return;
-      }
+    if (!isValid) {
+      res.status(403).send({ error: 'Incorrect token' });
+      return;
+    }
+
+    req.user = await db.loadUser(token.username);
+    if (!req.user) {
+      res.status(403).send({ error: 'Incorrect token' });
+      return;
     }
 
     next();
