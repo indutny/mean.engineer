@@ -8,7 +8,7 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "start": "node .",
-    "lint": "eslint **/*.ts",
+    "lint": "eslint .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Fedor Indutny <238531+indutny@users.noreply.github.com>",

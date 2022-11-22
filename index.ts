@@ -1,5 +1,4 @@
 import express from 'express';
-import fs from 'fs';
 
 import { Database } from './lib/db.js';
 import { Inbox } from './lib/inbox.js';

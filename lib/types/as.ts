@@ -10,7 +10,7 @@ export type Activity = Readonly<{
   id: string;
   type: string;
   actor: string;
-  object: any;
+  object: unknown;
   to?: string | Readonly<string>;
   bto?: string | Readonly<string>;
   cc?: string | Readonly<string>;

@@ -1,25 +1,29 @@
 import type { Request, Response, NextFunction } from 'express';
 
-export type AsyncHandler<Rest extends Array<unknown>> = (
-  req: Request,
-  res: Response,
+export type Handler<
+  Req extends Request,
+  Res extends Response,
+  Rest extends Array<unknown>,
+  Ret
+> = (
+  req: Req,
+  res: Res,
   next: NextFunction,
   ...rest: Rest
-) => Promise<void>;
+) => Ret;
 
-export type Handler<Rest extends Array<unknown>> = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-  ...rest: Rest
-) => void;
-
-export function wrap<Rest extends Array<unknown>>(
-  handler: AsyncHandler<Rest>,
-): Handler<Rest> {
+export function wrap<
+  Req extends Request,
+  Res extends Response,
+  Rest extends Array<unknown>,
+  H extends Handler<Req, Res, Rest, Promise<void>> =
+   Handler<Req, Res, Rest, Promise<void>>
+>(
+  handler: H
+): Handler<Req, Res, Rest, void> {
   async function run(
-    req: Request,
-    res: Response,
+    req: Req,
+    res: Res,
     next: NextFunction,
     ...rest: Rest
   ): Promise<void> {

@@ -3,8 +3,8 @@ import assert from 'assert';
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import type { Activity } from './types/as';
-
 import type { Outbox } from './outbox.js';
+import { isSameOrigin } from './util/isSameOrigin';
 
 export type InboxOptions = Readonly<{
   outbox: Outbox;
@@ -36,6 +36,11 @@ export class Inbox {
     follow: Activity,
   ): Promise<void> {
     const { object: objectString } = follow;
+    assert(
+      typeof objectString === 'string',
+      'follow.object is not a string',
+    );
+
     const object = new URL(objectString);
     const owner = user.getURL();
     assert.strictEqual(
@@ -63,7 +68,7 @@ export class Inbox {
     const { object } = activity;
     assert(object != null, 'Missing undo object');
 
-    const { type } = object;
+    const { type } = object as Activity;
     if (type === 'Follow') {
       return this.handleUnfollow(user, activity);
     }
@@ -72,11 +77,10 @@ export class Inbox {
   }
 
   private async handleUnfollow(user: User, activity: Activity): Promise<void> {
-    const { object: follow } = activity;
+    const follow = activity.object as Activity;
     const actor = new URL(activity.actor);
-    assert.strictEqual(
-      new URL(follow.id).origin,
-      actor.origin,
+    assert(
+      isSameOrigin(new URL(follow.id), actor),
       'Cross-origin unfollow'
     );
     await this.db.unfollow({

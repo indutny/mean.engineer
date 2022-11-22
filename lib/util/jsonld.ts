@@ -1,6 +1,8 @@
 import { readFileSync } from 'fs';
 import * as badJSONLD from 'jsonld';
 
+// Sadly types for JSONLD are really off.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const jsonld = (badJSONLD as any).default;
 
 function json(file: string): unknown {

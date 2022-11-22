@@ -15,6 +15,7 @@ import type { Outbox } from '../outbox.js';
 const debug = createDebug('me:routes:users');
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       targetUser?: User;
@@ -183,7 +184,7 @@ export default ({ db, inbox, outbox }: UsersOptions): Router => {
     }
 
     try {
-      await inbox.handleActivity(targetUser, req.body)
+      await inbox.handleActivity(targetUser, req.body);
       res.status(202).send();
     } catch (error) {
       debug('failed to handle activity %j %j', req.body, error.stack);

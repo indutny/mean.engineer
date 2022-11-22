@@ -1,47 +1,48 @@
 {
   "env": {
-    "browser": true,
+    "node": true,
     "es2021": true
   },
-    "extends": [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/recommended"
+  "ignorePatterns": ["**/*.js"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "overrides": [
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "rules": {
+    "indent": [
+      "error",
+      2
     ],
-    "overrides": [
+    "linebreak-style": [
+      "error",
+      "unix"
     ],
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-      "ecmaVersion": "latest",
-      "sourceType": "module"
-    },
-    "plugins": [
-      "@typescript-eslint"
+    "quotes": [
+      "error",
+      "single"
     ],
-    "rules": {
-      "indent": [
-        "error",
-        2
-      ],
-      "linebreak-style": [
-        "error",
-        "unix"
-      ],
-      "quotes": [
-        "error",
-        "single"
-      ],
-      "semi": [
-        "error",
-        "always"
-      ],
-      "eqeqeq": [
-        "error",
-        "always",
-        { "null": "never" }
-      ],
-      "max-len": [
-        "error",
-        80
-      ]
-    }
+    "semi": [
+      "error",
+      "always"
+    ],
+    "eqeqeq": [
+      "error",
+      "always",
+      { "null": "never" }
+    ],
+    "max-len": [
+      "error",
+      80
+    ]
+  }
 }

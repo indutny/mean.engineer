@@ -22,4 +22,4 @@ export default ({ inbox, outbox, db }: RoutesOptions): Router => {
   router.use('/users', users({ db, inbox, outbox }));
 
   return router;
-}
+};

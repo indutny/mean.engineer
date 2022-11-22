@@ -14,6 +14,7 @@ const MAX_AGE = 12 * 3600 * 1000;
 const SKEW = 3600 * 1000;
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       senderKey?: SenderKey;
@@ -113,7 +114,9 @@ export class Verifier {
     const json = await response.json();
     const ld = await compact(json);
 
-    const { publicKey } = ld as any;
+    type LD = Readonly<{ publicKey: string | ReadonlyArray<string> }>;
+
+    const { publicKey } = ld as LD;
     assert(publicKey, 'Remote did not return public key');
 
     const publicKeys = Array.isArray(publicKey) ? publicKey : [publicKey];
@@ -135,7 +138,7 @@ export class Verifier {
 export default function verifySignature(
   options?: VerifySignatureOptions,
 ): RequestHandler {
-  const v = new Verifier();
+  const v = new Verifier(options);
 
   return wrap(async (req, res, next) => {
     try {

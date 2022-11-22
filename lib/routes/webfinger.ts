@@ -65,7 +65,7 @@ export default (db: Database): Router => {
         {
           rel: 'http://ostatus.org/schema/1.0/subscribe',
           // TODO(indutny): support this
-          template: new URL(`./authorize_interaction?uri={uri}`, BASE_URL),
+          template: new URL('./authorize_interaction?uri={uri}', BASE_URL),
         }
       ]
     });
