@@ -196,21 +196,16 @@ export class Database {
     });
   }
 
-  public async incrementOutboxJobAttempts(
+  public async incrementAndGetOutboxJobAttempts(
     job: OutboxJob,
-  ): Promise<OutboxJob> {
-    const newAttempts = this.db.prepare(`
+  ): Promise<number> {
+    return this.db.prepare(`
       UPDATE outboxJobs
       SET attempts = attempts + 1
       WHERE id = $id
       RETURNING attempts
     `).pluck().get({
       id: job.id,
-    });
-
-    return new OutboxJob({
-      ...job.toAttributes(),
-      attempts: newAttempts,
     });
   }
 

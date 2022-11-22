@@ -138,29 +138,30 @@ export class Outbox {
 
   private onJob(job: OutboxJob): void {
     const runWithRetry = async (): Promise<void> => {
-      let currentJob = job;
+      let { attempts } = job;
+
       // eslint-disable-next-line no-constant-condition
       while (true) {
         try {
-          currentJob = await this.db.incrementOutboxJobAttempts(currentJob);
-          if (currentJob.attempts > MAX_OUTBOX_JOB_ATTEMPTS) {
-            await this.db.deleteOutboxJob(currentJob);
-            debug(`outbox job ${currentJob.getDebugId()} ran out of attempts`);
+          attempts = await this.db.incrementAndGetOutboxJobAttempts(job);
+          if (attempts > MAX_OUTBOX_JOB_ATTEMPTS) {
+            await this.db.deleteOutboxJob(job);
+            debug(`outbox job ${job.getDebugId()} ran out of attempts`);
             return;
           }
 
-          await this.runJob(currentJob);
-          await this.db.deleteOutboxJob(currentJob);
+          await this.runJob(job);
+          await this.db.deleteOutboxJob(job);
           return;
         } catch (error) {
           debug(
-            `outbox job ${currentJob.getDebugId()} failed error=%j`,
+            `outbox job ${job.getDebugId()} failed error=%j`,
             error,
           );
 
-          const delay = incrementalBackoff(currentJob.attempts);
+          const delay = incrementalBackoff(attempts);
           debug(
-            `outbox job ${currentJob.getDebugId()} waiting for %dms`,
+            `outbox job ${job.getDebugId()} waiting for %dms`,
             delay,
           );
           await sleep(delay);
