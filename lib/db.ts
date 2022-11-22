@@ -146,7 +146,6 @@ export class Database {
       RETURNING id
     `).pluck().get({
       ...attributes,
-      username: attributes.user.username,
       target: attributes.target.toString(),
       data: JSON.stringify(attributes.data),
       createdAt: attributes.createdAt.getTime(),
@@ -160,25 +159,13 @@ export class Database {
 
   public async getOutboxJobs(): Promise<ReadonlyArray<OutboxJob>> {
     const rows = this.db.prepare(`
-      SELECT
-        outboxJobs.*
-
-        users.passwordHash AS userPasswordHash,
-        users.passwordSalt AS userPasswordSalt,
-        users.passwordIterations AS userPasswordIterations,
-        users.privateKey AS userPrivateKey,
-        users.publicKey AS userPublicKey,
-        users.createdAt AS userCreatedAt,
-        users.profileName AS userProfileName,
-        users.about AS userAbout
+      SELECT *
       FROM outboxJobs
-      INNER JOIN users ON
-        users.username = outboxJobs.username
       ORDER BY createdAt ASC;
     `).all();
 
     return rows.map((columns): OutboxJob => {
-      return OutboxJob.fromJoinedColumns(columns);
+      return OutboxJob.fromColumns(columns);
     });
   }
 

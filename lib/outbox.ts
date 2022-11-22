@@ -75,7 +75,7 @@ export class Outbox {
     data: OutboxJob['data'],
   ): Promise<void> {
     const job = await this.db.createOutboxJob({
-      user,
+      username: user.username,
       target,
       data,
       attempts: 0,
@@ -123,7 +123,8 @@ export class Outbox {
   }
 
   private async runJob({
-    user,
+    id,
+    username,
     target,
     data,
   }: OutboxJob): Promise<void> {
@@ -132,7 +133,14 @@ export class Outbox {
       ...data,
     });
 
-    const inbox = await this.getInbox(target);
+    const [inbox, user] = await Promise.all([
+      this.getInbox(target),
+      this.db.loadUser(username),
+    ]);
+    if (!user) {
+      debug(`job ${id}: user ${username} no longer exists`);
+      return;
+    }
 
     const digest = createHash('sha256').update(json).digest('base64');
     const date = new Date().toUTCString();
@@ -170,7 +178,7 @@ export class Outbox {
     };
 
     debug(
-      'making outgoing request to %j plaintext=%j headers=%j',
+      `job ${id} making outgoing request to %j plaintext=%j headers=%j`,
       inbox,
       plaintext,
       headers,
@@ -181,7 +189,7 @@ export class Outbox {
       headers,
       body: json,
     });
-    debug('got response', res.status, res.headers);
+    debug(`job ${id} got response`, res.status, res.headers);
     if (res.status < 200 || res.status >= 300) {
       const reason = await res.text();
       throw new Error(
