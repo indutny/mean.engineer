@@ -146,7 +146,7 @@ export class Database {
       SELECT actor FROM followers
       WHERE owner = $owner
       ORDER BY createdAt DESC
-    `).all({ owner: owner.toString() });
+    `).pluck().all({ owner: owner.toString() });
   }
 
   public async getPaginatedFollowers(
