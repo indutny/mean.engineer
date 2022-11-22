@@ -3,13 +3,14 @@ import { Router } from 'express';
 import createDebug from 'debug';
 
 import { compact } from '../util/jsonld.js';
+import { paginateResponse } from '../util/paginateResponse.js';
+import { isSameOrigin } from '../util/isSameOrigin.js';
 import verifySignature from '../middlewares/verifySignature.js';
 import { wrap } from '../middlewares/wrap.js';
 import type { User } from '../models/user.js';
 import type { Database } from '../db.js';
 import type { Inbox } from '../inbox.js';
 import type { Outbox } from '../outbox.js';
-import { paginate } from './paginate.js';
 
 const debug = createDebug('me:routes:users');
 
@@ -139,7 +140,7 @@ export default ({ db, inbox, outbox }: UsersOptions): Router => {
 
     const userURL = targetUser.getURL();
 
-    await paginate(req, res, {
+    await paginateResponse(req, res, {
       url: new URL(`${userURL}/followers`),
       summary: `${targetUser.profileName}'s followers`,
       getData: (page) => db.getPaginatedFollowers(userURL, page),
@@ -152,7 +153,7 @@ export default ({ db, inbox, outbox }: UsersOptions): Router => {
 
     const userURL = targetUser.getURL();
 
-    await paginate(req, res, {
+    await paginateResponse(req, res, {
       url: new URL(`${userURL}/following`),
       summary: `${targetUser.profileName}'s following`,
       getData: (page) => db.getPaginatedFollowing(userURL, page),
@@ -175,7 +176,7 @@ export default ({ db, inbox, outbox }: UsersOptions): Router => {
     }
 
     // Can't squat others ids!
-    if (id && new URL(id).origin !== new URL(actor).origin) {
+    if (id && isSameOrigin(id, actor)) {
       debug('invalid activity id=%j actor=%j', id, req.body.actor);
       res.status(400).send({ error: 'Invalid activity id' });
       return;

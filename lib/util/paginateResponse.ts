@@ -8,7 +8,7 @@ export type PaginateOptions = Readonly<{
   getData(page?: number): Promise<Paginated<URL>>;
 }>;
 
-export async function paginate(
+export async function paginateResponse(
   req: Request,
   res: Response,
   { url, summary, getData } : PaginateOptions,
