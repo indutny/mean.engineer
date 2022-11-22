@@ -11,9 +11,10 @@ export type OutboxJobAttributes = Readonly<{
 
 export type OutboxJobColumns = Omit<
   OutboxJobAttributes,
-  'user' | 'target' | 'createdAt'
+  'user' | 'data' | 'target' | 'createdAt'
 > & Readonly<{
   username: string;
+  data: string;
   target: string;
   createdAt: number;
 }>;
@@ -56,6 +57,7 @@ export class OutboxJob {
       username: this.user.username,
       target: this.target.toString(),
       createdAt: this.createdAt.getTime(),
+      data: JSON.stringify(this.data),
     };
   }
 
@@ -63,6 +65,7 @@ export class OutboxJob {
     username,
     target,
     createdAt,
+    data,
 
     userPasswordHash,
     userPasswordSalt,
@@ -90,6 +93,7 @@ export class OutboxJob {
       user,
       target: new URL(target),
       createdAt: new Date(createdAt),
+      data: JSON.parse(data),
       ...attributes,
     });
   }

@@ -148,6 +148,7 @@ export class Database {
       ...attributes,
       username: attributes.user.username,
       target: attributes.target.toString(),
+      data: JSON.stringify(attributes.data),
       createdAt: attributes.createdAt.getTime(),
     });
 
