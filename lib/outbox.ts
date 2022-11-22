@@ -99,6 +99,7 @@ export class Outbox {
           }
 
           await this.runJob(currentJob);
+          await this.db.deleteOutboxJob(currentJob);
           return;
         } catch (error) {
           debug(
