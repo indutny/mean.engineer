@@ -141,8 +141,18 @@ export class Database {
 
   public async getFollowers(
     owner: URL,
+  ): Promise<ReadonlyArray<URL>> {
+    return this.db.prepare(`
+      SELECT actor FROM followers
+      WHERE owner = $owner
+      ORDER BY createdAt DESC
+    `).all({ owner: owner.toString() });
+  }
+
+  public async getPaginatedFollowers(
+    owner: URL,
     page?: number,
-  ): Promise<Paginated<string>> {
+  ): Promise<Paginated<URL>> {
     return this.paginate(`
       SELECT <COLUMNS> FROM followers
       WHERE owner = $owner
@@ -150,10 +160,10 @@ export class Database {
     `, 'actor', { owner: owner.toString() }, { page, pluck: true });
   }
 
-  public async getFollowing(
+  public async getPaginatedFollowing(
     actor: URL,
     page?: number,
-  ): Promise<Paginated<string>> {
+  ): Promise<Paginated<URL>> {
     return this.paginate(`
       SELECT <COLUMNS> FROM followers
       WHERE actor = $actor

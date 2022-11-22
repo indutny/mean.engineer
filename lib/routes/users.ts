@@ -9,7 +9,7 @@ import type { User } from '../models/user.js';
 import type { Database } from '../db.js';
 import type { Inbox } from '../inbox.js';
 import type { Outbox } from '../outbox.js';
-import { paginate } from './util.js';
+import { paginate } from './paginate.js';
 
 const debug = createDebug('me:routes:users');
 
@@ -142,7 +142,7 @@ export default ({ db, inbox, outbox }: UsersOptions): Router => {
     await paginate(req, res, {
       url: new URL(`${userURL}/followers`),
       summary: `${targetUser.profileName}'s followers`,
-      getData: (page) => db.getFollowers(userURL, page),
+      getData: (page) => db.getPaginatedFollowers(userURL, page),
     });
   }));
 
@@ -155,7 +155,7 @@ export default ({ db, inbox, outbox }: UsersOptions): Router => {
     await paginate(req, res, {
       url: new URL(`${userURL}/following`),
       summary: `${targetUser.profileName}'s following`,
-      getData: (page) => db.getFollowing(userURL, page),
+      getData: (page) => db.getPaginatedFollowing(userURL, page),
     });
   }));
 

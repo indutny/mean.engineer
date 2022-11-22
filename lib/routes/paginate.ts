@@ -5,7 +5,7 @@ import type { Paginated } from '../db.js';
 export type PaginateOptions = Readonly<{
   url: URL;
   summary: string;
-  getData(page?: number): Promise<Paginated<string>>;
+  getData(page?: number): Promise<Paginated<URL>>;
 }>;
 
 export async function paginate(

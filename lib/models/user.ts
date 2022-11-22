@@ -94,6 +94,10 @@ export class User implements UserAttributes {
     return new URL(`./users/${this.username}`, BASE_URL);
   }
 
+  public getInboxURL(): URL {
+    return new URL(`./users/${this.username}/inbox`, BASE_URL);
+  }
+
   public toColumns(): UserColumns {
     return {
       ...this,

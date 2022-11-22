@@ -5,7 +5,12 @@ import createDebug from 'debug';
 import { setTimeout as sleep } from 'timers/promises';
 import pMap from 'p-map';
 
-import { USER_AGENT, BASE_URL, MAX_OUTBOX_JOB_ATTEMPTS } from './config.js';
+import {
+  HOST,
+  USER_AGENT,
+  BASE_URL,
+  MAX_OUTBOX_JOB_ATTEMPTS,
+} from './config.js';
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import { OutboxJob } from './models/outboxJob.js';
@@ -23,9 +28,13 @@ export type OutboxOptions = Readonly<{
   cacheTTL?: number;
 }>;
 
+type GetInboxesOptions = Readonly<{
+  resolve: boolean;
+}>;
+
 export class Outbox {
   private readonly db: Database;
-  private readonly inboxCache: LRU<string, URL>;
+  private readonly inboxCache: LRU<string, ReadonlyArray<URL>>;
 
   constructor({
     db,
@@ -47,7 +56,10 @@ export class Outbox {
       try {
         this.onJob(job);
       } catch (error) {
-        debug(`failed to run persisted job ${job.getDebugId()} error=%j`, error);
+        debug(
+          `failed to run persisted job ${job.getDebugId()} error=%j`,
+          error,
+        );
       }
     }
   }
@@ -65,7 +77,9 @@ export class Outbox {
 
     debug(`accepting follow ${us} <- ${target}`);
 
-    const inbox = await this.getInbox(target);
+    const [inbox] = await this.getInboxes(target, {
+      resolve: false,
+    });
     await this.queueJob(user, inbox, data);
   }
 
@@ -85,13 +99,17 @@ export class Outbox {
       .filter((x: string | undefined): x is string => x !== undefined)
       .map(x => new URL(x));
 
-    const inboxes = await pMap(targets, target => this.getInbox(target), {
-      concurrency: MAX_INBOX_FETCH_CONCURRENCY,
-      stopOnError: true,
-    });
+    const inboxes = await pMap(
+      targets,
+      target => this.getInboxes(target, { resolve: true }),
+      {
+        concurrency: MAX_INBOX_FETCH_CONCURRENCY,
+        stopOnError: true,
+      },
+    );
 
     // Deduplicate
-    const uniqueInboxes = [...new Set(inboxes)];
+    const uniqueInboxes = [...new Set(inboxes.flat())];
 
     await Promise.all(uniqueInboxes.map(
       inbox => this.queueJob(user, inbox, data),
@@ -227,33 +245,78 @@ export class Outbox {
     }
   }
 
-  private async getInbox(target: URL): Promise<URL> {
-    const cacheKey = target.toString();
-    const cached = this.inboxCache.get(cacheKey);
-    if (cached) {
-      return cached;
+  private async getInboxes(
+    target: URL,
+    options: GetInboxesOptions,
+  ): Promise<ReadonlyArray<URL>> {
+    try {
+      if (target.origin === HOST) {
+        return this.getLocalInboxes(target, options);
+      }
+
+      const cacheKey = target.toString();
+      const cached = this.inboxCache.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
+      const res = await fetch(target, {
+        headers: {
+          'accept': 'application/activity+json',
+          'user-agent': USER_AGENT,
+        },
+      });
+
+      assert(200 <= res.status && res.status < 300, 'Invalid status code');
+
+      const json = await res.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ld = (await compact(json)) as any;
+      const { type } = ld;
+
+      // TODO(indutny): resolve collections
+      assert(ACTOR_TYPES.has(type), 'Invalid actor type');
+
+      const inbox = ld.endpoints?.sharedInbox || ld.inbox;
+      assert.strictEqual(typeof inbox, 'string', 'Missing inbox field');
+
+      const urls = [new URL(inbox)];
+
+      this.inboxCache.set(cacheKey, urls);
+
+      return urls;
+    } catch (error) {
+      debug('getInbox got error=%j', error);
+      return [];
+    }
+  }
+
+  private async getLocalInboxes(
+    target: URL,
+    { resolve }: GetInboxesOptions
+  ): Promise<ReadonlyArray<URL>> {
+    assert(!target.search, 'Queries are not allowed for local inboxes');
+
+    const userMatch = target.pathname.match(/^\/users\/([^/]+)$/);
+    if (userMatch) {
+      const user = await this.db.loadUser(userMatch[1]);
+      assert(user, `Local user ${userMatch[1]} not found`);
+      return [user.getInboxURL()];
     }
 
-    const res = await fetch(target, {
-      headers: {
-        'accept': 'application/activity+json',
-        'user-agent': USER_AGENT,
-      },
-    });
+    const followersMatch = target.pathname.match(
+      /^\/users\/([^/]+)\/followers$/
+    );
+    if (followersMatch) {
+      assert(resolve, `Refuse to resolve local followers for ${target}`);
 
-    const json = await res.json();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let { type, inbox, endpoints } = (await compact(json)) as any;
-    assert(ACTOR_TYPES.has(type), 'Invalid actor type');
+      const user = await this.db.loadUser(followersMatch[1]);
+      assert(user, `Local user ${followersMatch[1]} not found`);
 
-    inbox = endpoints?.sharedInbox || inbox;
-    assert.strictEqual(typeof inbox, 'string', 'Missing inbox field');
+      return this.db.getFollowers(user.getURL());
+    }
 
-    const url = new URL(inbox);
-
-    this.inboxCache.set(cacheKey, url);
-
-    return url;
+    throw new Error(`Failed to parse local url ${target}`);
   }
 
   private invalidateInbox(target: URL): void {
