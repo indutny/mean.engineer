@@ -6,11 +6,14 @@ import {
 } from 'crypto';
 import { promisify } from 'util';
 
-import { BASE_URL } from '../config.js';
-
-const PBKDF2_ITERATIONS = 10000;
-const HASH_LENGTH = 32;
-const RSA_SIZE = 2048;
+import {
+  BASE_URL,
+  PBKDF2_ITERATIONS,
+  PBKDF2_SALT_LEN,
+  PBKDF2_HASH_ALGO,
+  PBKDF2_OUTPUT_LEN,
+  RSA_SIZE,
+} from '../config.js';
 
 export interface UserAttributes {
   username: string;
@@ -63,14 +66,14 @@ export class User implements UserAttributes {
     password,
     ...attrs
   }: NewUserOptions): Promise<User> {
-    const passwordSalt = randomBytes(16);
+    const passwordSalt = randomBytes(PBKDF2_SALT_LEN);
     const passwordIterations = PBKDF2_ITERATIONS;
     const passwordHash = await promisify(pbkdf2)(
       password,
       passwordSalt,
       passwordIterations,
-      HASH_LENGTH,
-      'sha256',
+      PBKDF2_OUTPUT_LEN,
+      PBKDF2_HASH_ALGO,
     );
 
     return new User({
@@ -113,8 +116,8 @@ export class User implements UserAttributes {
       password,
       this.passwordSalt,
       this.passwordIterations,
-      HASH_LENGTH,
-      'sha256',
+      PBKDF2_OUTPUT_LEN,
+      PBKDF2_HASH_ALGO,
     );
 
     return timingSafeEqual(supplied, this.passwordHash);

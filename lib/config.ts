@@ -58,3 +58,13 @@ export const MAX_ATTACHMENTS = 4;
 export const USER_AGENT = `Mean Engineer 1.0.0 (${HOST})`;
 
 export const MAX_OUTBOX_JOB_ATTEMPTS = 10;
+
+export const RSA_SIZE = 2048;
+
+export const PBKDF2_ITERATIONS = 10000;
+
+export const PBKDF2_SALT_LEN = 32;
+
+export const PBKDF2_HASH_ALGO = 'sha256';
+
+export const PBKDF2_OUTPUT_LEN = 32;

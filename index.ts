@@ -6,6 +6,7 @@ import { Inbox } from './lib/inbox.js';
 import { Outbox } from './lib/outbox.js';
 import routes from './lib/routes/index.js';
 import { bodyVerifier } from './lib/util/body-verifier.js';
+import { auth } from './lib/middlewares/auth.js';
 
 const db = new Database();
 
@@ -25,6 +26,7 @@ app.use(express.json({
   verify: bodyVerifier,
 }));
 app.use(express.urlencoded({ extended: false, verify: bodyVerifier }));
+app.use(auth(db));
 
 app.all('*', function (req, res, next) {
   console.log(req.method, req.headers, req.url, req.body);

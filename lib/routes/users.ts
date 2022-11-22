@@ -5,20 +5,29 @@ import createDebug from 'debug';
 import { compact } from '../util/jsonld.js';
 import verifySignature from '../middlewares/verifySignature.js';
 import { wrap } from '../middlewares/wrap.js';
+import type { User } from '../models/user.js';
 import type { Database } from '../db.js';
 import type { Inbox } from '../inbox.js';
 import { paginate } from './util.js';
 
 const debug = createDebug('me:routes:users');
 
+declare global {
+  namespace Express {
+    interface Request {
+      targetUser?: User;
+    }
+  }
+}
+
 export default (db: Database, inbox: Inbox): Router => {
   const router = Router();
 
   router.param('user', wrap(async (req, res, next, name) => {
-    req.user = await db.loadUser(name);
+    req.targetUser = await db.loadUser(name);
 
-    if (!req.user) {
-      res.status(404).send({ error: 'user not found' });
+    if (!req.targetUser) {
+      res.status(404).send({ error: 'target user not found' });
       return;
     }
 
@@ -67,10 +76,10 @@ export default (db: Database, inbox: Inbox): Router => {
   }));
 
   router.get('/:user', (req, res) => {
-    const { user } = req;
-    assert(user, 'Must have user');
+    const { targetUser } = req;
+    assert(targetUser, 'Must have targetUser');
 
-    const url = user.getURL();
+    const url = targetUser.getURL();
 
     res.type('application/activity+json').send({
       '@context': 'https://www.w3.org/ns/activitystreams',
@@ -80,16 +89,16 @@ export default (db: Database, inbox: Inbox): Router => {
       followers: `${url}/followers`,
       inbox: `${url}/inbox`,
       outbox: `${url}/outbox`,
-      preferredUsername: user.username,
-      name: user.profileName,
-      summary: user.about,
+      preferredUsername: targetUser.username,
+      name: targetUser.profileName,
+      summary: targetUser.about,
 
       // TODO(indutny): shared inbox
 
       publicKey: {
         id: `${url}#main-key`,
         owner: url,
-        publicKeyPem: user.publicKey,
+        publicKeyPem: targetUser.publicKey,
       },
     });
   });
@@ -99,27 +108,27 @@ export default (db: Database, inbox: Inbox): Router => {
   });
 
   router.get('/:user/followers', wrap(async (req, res) => {
-    const { user } = req;
-    assert(user, 'Must have user');
+    const { targetUser } = req;
+    assert(targetUser, 'Must have user');
 
-    const userURL = user.getURL();
+    const userURL = targetUser.getURL();
 
     await paginate(req, res, {
       url: new URL(`${userURL}/followers`),
-      summary: `${user.profileName}'s followers`,
+      summary: `${targetUser.profileName}'s followers`,
       getData: (page) => db.getFollowers(userURL, page),
     });
   }));
 
   router.get('/:user/following', wrap(async (req, res) => {
-    const { user } = req;
-    assert(user, 'Must have user');
+    const { targetUser } = req;
+    assert(targetUser, 'Must have targetUser');
 
-    const userURL = user.getURL();
+    const userURL = targetUser.getURL();
 
     await paginate(req, res, {
       url: new URL(`${userURL}/following`),
-      summary: `${user.profileName}'s following`,
+      summary: `${targetUser.profileName}'s following`,
       getData: (page) => db.getFollowing(userURL, page),
     });
   }));
@@ -130,8 +139,8 @@ export default (db: Database, inbox: Inbox): Router => {
       return;
     }
 
-    const { user } = req;
-    assert(user, 'Must have user');
+    const { targetUser } = req;
+    assert(targetUser, 'Must have targetUser');
 
     const { id, actor } = req.body;
     if (req.senderKey.owner !== actor) {
@@ -147,7 +156,7 @@ export default (db: Database, inbox: Inbox): Router => {
     }
 
     try {
-      await inbox.handleActivity(user, req.body)
+      await inbox.handleActivity(targetUser, req.body)
       res.status(202).send();
     } catch (error) {
       debug('failed to handle activity %j %j', req.body, error.stack);

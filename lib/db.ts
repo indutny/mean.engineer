@@ -3,6 +3,7 @@ import type { Database as Native } from 'better-sqlite3';
 
 import { DB_PATH, DB_PAGE_SIZE } from './config.js';
 import { User } from './models/user.js';
+import { AuthToken } from './models/authToken.js';
 import { OutboxJob, type OutboxJobAttributes } from './models/outboxJob.js';
 
 export type Paginated<Row> = Readonly<{
@@ -68,6 +69,7 @@ export class Database {
     });
   }
 
+  // TODO(indutny): Cache results
   public async loadUser(username: string): Promise<User | undefined> {
     // TODO(indutny): cache statement
     const columns = this.db
@@ -78,6 +80,34 @@ export class Database {
     }
 
     return User.fromColumns(columns);
+  }
+
+  //
+  // Auth
+  //
+
+  public async saveAuthToken(token: AuthToken): Promise<void> {
+    this.db.prepare(`
+      INSERT INTO authTokens
+      (username, hash, salt, iterations, createdAt)
+      VALUES
+      ($username, $hash, salt, iterations, $createdAt)
+    `).run(token.toColumns());
+  }
+
+  // TODO(indutny): Cache results
+  public async loadAuthToken(
+    salt: Buffer,
+  ): Promise<AuthToken | undefined> {
+    const columns = this.db.prepare(`
+      SELECT * FROM authTokens
+      WHERE salt = $salt
+    `).get({ salt });
+    if (!columns) {
+      return undefined;
+    }
+
+    return AuthToken.fromColumns(columns);
   }
 
   //
@@ -260,9 +290,22 @@ export class Database {
           about STRING NON NULL
         );
 
+        CREATE TABLE authTokens (
+          username STRING NON NULL REFERENCES users(username) ON DELETE CASCADE,
+          title STRING NON NULL,
+          hash BLOB NON NULL,
+          salt BLOB PRIMARY KEY,
+          iterations INTEGER NON NULL,
+          createdAt INTEGER NON NULL
+        );
+
+        CREATE INDEX authTokens_by_username_and_title
+        ON authTokens
+        (username, title);
+
         CREATE TABLE outboxJobs (
           id INTEGER PRIMARY KEY,
-          actor STRING NON NULL,
+          actor STRING NON NULL REFERENCES users(username) ON DELETE CASCADE,
           target STRING NON NULL,
           data STRING NON NULL,
           attempts INTEGER NON NULL,
