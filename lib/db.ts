@@ -89,9 +89,9 @@ export class Database {
   public async saveAuthToken(token: AuthToken): Promise<void> {
     this.db.prepare(`
       INSERT INTO authTokens
-      (username, hash, salt, iterations, createdAt)
+      (username, $title, hash, salt, iterations, createdAt)
       VALUES
-      ($username, $hash, salt, iterations, $createdAt)
+      ($username, $title, $hash, salt, iterations, $createdAt)
     `).run(token.toColumns());
   }
 
