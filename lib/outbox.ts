@@ -97,7 +97,7 @@ export class Outbox {
     } = data;
 
     debug(
-      'sending activity %j to=%j cc=%j bto=%j bcc=%j', data, to, cc, bcc, bto,
+      'sending activity %O to=%j cc=%j bto=%j bcc=%j', data, to, cc, bcc, bto,
     );
 
     const targets = [bto, bcc, to, cc].flat()
@@ -116,7 +116,7 @@ export class Outbox {
     // Deduplicate
     const uniqueInboxes = [...new Set(inboxes.flat())];
     debug(
-      'got unique inboxes for %j, %j', data, uniqueInboxes
+      'got unique inboxes for %O, %j', data, uniqueInboxes
     );
 
     await Promise.all(uniqueInboxes.map(
@@ -233,7 +233,7 @@ export class Outbox {
     };
 
     debug(
-      `job ${id} making outgoing request to %j plaintext=%j headers=%j`,
+      `job ${id} making outgoing request to %j plaintext=%j headers=%O`,
       inbox.toString(),
       plaintext,
       headers,
@@ -244,7 +244,11 @@ export class Outbox {
       headers,
       body: json,
     });
-    debug(`job ${id} got response`, res.status, res.headers);
+    debug(
+      `job ${id} got response status=%d headers=%O`,
+      res.status,
+      Array.from(res.headers.entries()),
+    );
     if (res.status < 200 || res.status >= 300) {
       const reason = await res.text();
       throw new Error(
