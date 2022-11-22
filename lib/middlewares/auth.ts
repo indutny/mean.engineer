@@ -31,10 +31,10 @@ export function auth(db: Database): RequestHandler {
     let isValid = false;
     let token: AuthToken | undefined;
     try {
-      const salt = Buffer.from(match[1], 'base64');
+      const id = Buffer.from(match[1], 'base64');
       const plaintext = Buffer.from(match[2], 'base64');
 
-      token = await db.loadAuthToken(salt);
+      token = await db.loadAuthToken(id);
       if (!token) {
         res.status(403).send({ error: 'Incorrect token' });
         return;

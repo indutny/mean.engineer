@@ -12,9 +12,11 @@ import {
   PBKDF2_OUTPUT_LEN,
 } from '../config.js';
 
-const PLAINTEXT_TOKEN_LEN = 16;
+const TOKEN_ID_LEN = 8;
+const PLAINTEXT_TOKEN_LEN = 32;
 
 export interface AuthTokenAttributes {
+  id: Buffer;
   username: string;
   title: string;
   hash: Buffer;
@@ -36,6 +38,7 @@ export type NewAuthTokenOptions = Readonly<{
 }>;
 
 export class AuthToken implements AuthTokenAttributes {
+  public readonly id: Buffer;
   public readonly username: string;
   public readonly title: string;
   public readonly hash: Buffer;
@@ -44,6 +47,7 @@ export class AuthToken implements AuthTokenAttributes {
   public readonly createdAt: Date;
 
   constructor(attrs: AuthTokenAttributes) {
+    this.id = attrs.id;
     this.username = attrs.username;
     this.title = attrs.title;
     this.hash = attrs.hash;
@@ -57,6 +61,7 @@ export class AuthToken implements AuthTokenAttributes {
   ): Promise<[AuthToken, string]> {
     const plaintext = randomBytes(PLAINTEXT_TOKEN_LEN);
 
+    const id = randomBytes(TOKEN_ID_LEN);
     const salt = randomBytes(PBKDF2_SALT_LEN);
     const iterations = PBKDF2_ITERATIONS;
     const hash = await promisify(pbkdf2)(
@@ -68,12 +73,13 @@ export class AuthToken implements AuthTokenAttributes {
     );
 
     const plaintextToken = [
-      salt.toString('base64'),
+      id.toString('base64'),
       plaintext.toString('base64'),
     ].join(':');
 
     return [new AuthToken({
       ...attrs,
+      id,
       salt,
       iterations,
       hash,

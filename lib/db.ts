@@ -89,20 +89,20 @@ export class Database {
   public async saveAuthToken(token: AuthToken): Promise<void> {
     this.db.prepare(`
       INSERT INTO authTokens
-      (username, title, hash, salt, iterations, createdAt)
+      (id, username, title, hash, salt, iterations, createdAt)
       VALUES
-      ($username, $title, $hash, $salt, $iterations, $createdAt)
+      ($id, $username, $title, $hash, $salt, $iterations, $createdAt)
     `).run(token.toColumns());
   }
 
   // TODO(indutny): Cache results
   public async loadAuthToken(
-    salt: Buffer,
+    id: Buffer,
   ): Promise<AuthToken | undefined> {
     const columns = this.db.prepare(`
       SELECT * FROM authTokens
-      WHERE salt = $salt
-    `).get({ salt });
+      WHERE id = $id
+    `).get({ id });
     if (!columns) {
       return undefined;
     }
@@ -291,10 +291,11 @@ export class Database {
         );
 
         CREATE TABLE authTokens (
+          id BLOB PRIMARY KEY,
           username STRING NON NULL REFERENCES users(username) ON DELETE CASCADE,
           title STRING NON NULL,
           hash BLOB NON NULL,
-          salt BLOB PRIMARY KEY,
+          salt BLOB NON NULL,
           iterations INTEGER NON NULL,
           createdAt INTEGER NON NULL
         );
