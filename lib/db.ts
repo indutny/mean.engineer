@@ -144,7 +144,12 @@ export class Database {
       VALUES
       ($username, $target, $data, $attempts, $createdAt)
       RETURNING rowid
-    `).pluck().get(attributes);
+    `).pluck().get({
+      ...attributes,
+      username: attributes.user.username,
+      target: attributes.target.toString(),
+      createdAt: attributes.createdAt.getTime(),
+    });
 
     return new OutboxJob({
       ...attributes,
