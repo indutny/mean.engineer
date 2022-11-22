@@ -258,7 +258,7 @@ export class Outbox {
     options: GetInboxesOptions,
   ): Promise<ReadonlyArray<URL>> {
     try {
-      if (target.origin === HOST) {
+      if (target.host === HOST) {
         return this.getLocalInboxes(target, options);
       }
 
