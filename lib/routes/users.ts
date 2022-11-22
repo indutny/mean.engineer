@@ -3,7 +3,7 @@ import { Router } from 'express';
 import createDebug from 'debug';
 
 import { compact } from '../util/jsonld.js';
-import verifySignature from '../middlewares/verify-signature.js';
+import verifySignature from '../middlewares/verifySignature.js';
 import { wrap } from '../middlewares/wrap.js';
 import type { Database } from '../db.js';
 import type { Inbox } from '../inbox.js';

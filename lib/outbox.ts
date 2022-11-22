@@ -2,11 +2,14 @@ import assert from 'assert';
 import LRU from 'lru-cache';
 import { createHash, createSign, randomUUID } from 'crypto';
 import createDebug from 'debug';
+import { setTimeout as sleep } from 'timers/promises';
 
-import { USER_AGENT, BASE_URL } from './config.js';
+import { USER_AGENT, BASE_URL, MAX_OUTBOX_JOB_ATTEMPTS } from './config.js';
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
+import type { OutboxJob } from './models/outboxJob.js';
 import type { Activity } from './types/as.d';
+import { incrementalBackoff } from './util/incrementalBackoff.js';
 import { compact } from './util/jsonld.js';
 
 const debug = createDebug('me:outbox');
@@ -33,9 +36,22 @@ export class Outbox {
     });
   }
 
+  public async runJobs(): Promise<void> {
+    const jobs = await this.db.getOutboxJobs();
+
+    // TODO(indutny): limit parallelism
+    for (const job of jobs) {
+      try {
+        this.onJob(job);
+      } catch (error) {
+        debug(`failed to run persisted job ${job.id} error=%j`, error);
+      }
+    }
+  }
+
   public async acceptFollow(user: User, follow: Activity): Promise<void> {
     const us = user.getURL();
-    const body = {
+    const data = {
       id: `${BASE_URL}/${randomUUID()}`,
       type: 'Accept',
       actor: us,
@@ -45,22 +61,67 @@ export class Outbox {
     const target = new URL(follow.actor);
 
     debug(`accepting follow ${us} <- ${target}`);
-    await this.send(user, target, body);
-    debug(`accepted follow ${us} <- ${target}`);
+
+    await this.queueJob(user, target, data);
   }
 
   //
   // Private
   //
 
-  private async send(
+  private async queueJob(
     user: User,
     target: URL,
-    body: Record<string, unknown>,
+    data: OutboxJob['data'],
   ): Promise<void> {
+    const job = await this.db.createOutboxJob({
+      user,
+      target,
+      data,
+      attempts: 0,
+      createdAt: new Date(),
+    });
+
+    this.onJob(job);
+  }
+
+  private onJob(job: OutboxJob): void {
+    const runWithRetry = async (): Promise<void> => {
+      let currentJob = job;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        try {
+          currentJob = await this.db.incrementOutboxJobAttempts(currentJob);
+          if (currentJob.attempts > MAX_OUTBOX_JOB_ATTEMPTS) {
+            debug(`outbox job ${currentJob.id} ran out of attempts`);
+            return;
+          }
+
+          await this.runJob(currentJob);
+          return;
+        } catch (error) {
+          const delay = incrementalBackoff(currentJob.attempts);
+          debug(
+            `outbox job ${currentJob.id} failed error=%j retrying in ${delay}`,
+            error,
+          );
+
+          await sleep(delay);
+        }
+      }
+    };
+
+    runWithRetry();
+  }
+
+  private async runJob({
+    user,
+    target,
+    data,
+  }: OutboxJob): Promise<void> {
     const json = JSON.stringify({
       '@context': 'https://www.w3.org/ns/activitystreams',
-      ...body,
+      ...data,
     });
 
     const inbox = await this.getInbox(target);
@@ -146,5 +207,9 @@ export class Outbox {
     this.inboxCache.set(cacheKey, inbox);
 
     return inbox;
+  }
+
+  private invalidateInbox(target: URL): void {
+    this.inboxCache.delete(target.toString());
   }
 }

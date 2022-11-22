@@ -3,6 +3,7 @@ import type { Database as Native } from 'better-sqlite3';
 
 import { DB_PATH, DB_PAGE_SIZE } from './config.js';
 import { User } from './models/user.js';
+import { OutboxJob, type OutboxJobAttributes } from './models/outboxJob.js';
 
 export type Paginated<Row> = Readonly<{
   totalRows: number;
@@ -131,6 +132,69 @@ export class Database {
   }
 
   //
+  // Outbox Jobs
+  //
+
+  public async createOutboxJob(
+    attributes: Omit<OutboxJobAttributes, 'id'>,
+  ): Promise<OutboxJob> {
+    const id = this.db.prepare(`
+      INSERT INTO outboxJobs
+      (username, target, data, attempts, createdAt)
+      VALUES
+      ($username, $target, $data, $attempts, $createdAt)
+      RETURNING rowid
+    `).pluck().get(attributes);
+
+    return new OutboxJob({
+      ...attributes,
+      id,
+    });
+  }
+
+  public async getOutboxJobs(): Promise<ReadonlyArray<OutboxJob>> {
+    const rows = this.db.prepare(`
+      SELECT
+        outboxJobs.*
+
+        users.passwordHash AS userPasswordHash,
+        users.passwordSalt AS userPasswordSalt,
+        users.passwordIterations AS userPasswordIterations,
+        users.privateKey AS userPrivateKey,
+        users.publicKey AS userPublicKey,
+        users.createdAt AS userCreatedAt,
+        users.profileName AS userProfileName,
+        users.about AS userAbout
+      FROM outboxJobs
+      INNER JOIN users ON
+        users.username = outboxJobs.username
+      ORDER BY createdAt ASC;
+    `).all();
+
+    return rows.map((columns): OutboxJob => {
+      return OutboxJob.fromJoinedColumns(columns);
+    });
+  }
+
+  public async incrementOutboxJobAttempts(
+    job: OutboxJob,
+  ): Promise<OutboxJob> {
+    const newAttempts = this.db.prepare(`
+      UPDATE outboxJobs
+      SET attempts = attempts + 1
+      WHERE id = $id
+      RETURNING attempts
+    `).pluck().get({
+      id: job.id,
+    });
+
+    return new OutboxJob({
+      ...job.toAttributes(),
+      attempts: newAttempts,
+    });
+  }
+
+  //
   // Private
   //
 
@@ -191,6 +255,18 @@ export class Database {
           profileName STRING NON NULL,
           about STRING NON NULL
         );
+
+        CREATE TABLE outboxJobs (
+          rowid INTEGER PRIMARY KEY,
+          username STRING NON NULL,
+          target STRING NON NULL,
+          data STRING NON NULL,
+          attempts INTEGER NON NULL,
+          createdAt INTEGER NON NULL
+        );
+
+        CREATE INDEX outboxJobs_by_createdAt ON outboxJobs (createdAt ASC);
+        CREATE INDEX outboxJobs_by_attempts ON outboxJobs (attempts);
 
         CREATE TABLE followers (
           owner STRING NON NULL,

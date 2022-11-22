@@ -33,7 +33,11 @@ app.all('*', function (req, res, next) {
 
 app.use(routes({ inbox, db }));
 
-app.listen(8000, '127.0.0.1');
+await outbox.runJobs();
+
+const server = app.listen(8000, '127.0.0.1', () => {
+  console.log('Listening on', server.address());
+});
 
 process.on('SIGINT', () => {
   db.close();

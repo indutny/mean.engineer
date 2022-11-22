@@ -25,9 +25,9 @@ export interface UserAttributes {
   about: string;
 }
 
-export type UserColumns = Exclude<UserAttributes, 'createdAt'> & {
+export type UserColumns = Omit<UserAttributes, 'createdAt'> & Readonly<{
   createdAt: number;
-};
+}>;
 
 export type NewUserOptions = Readonly<{
   username: string;
@@ -37,16 +37,15 @@ export type NewUserOptions = Readonly<{
 }>;
 
 export class User implements UserAttributes {
-  public username: string;
-  public passwordHash: Buffer;
-  public passwordSalt: Buffer;
-  public passwordIterations: number;
-  public privateKey: string;
-  public publicKey: string;
-  public createdAt: Date;
-
-  public profileName: string;
-  public about: string;
+  public readonly username: string;
+  public readonly passwordHash: Buffer;
+  public readonly passwordSalt: Buffer;
+  public readonly passwordIterations: number;
+  public readonly privateKey: string;
+  public readonly publicKey: string;
+  public readonly createdAt: Date;
+  public readonly profileName: string;
+  public readonly about: string;
 
   constructor(attrs: UserAttributes) {
     this.username = attrs.username;
