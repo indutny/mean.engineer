@@ -168,9 +168,9 @@ export class Database {
   public async saveOutboxJob(job: OutboxJob): Promise<void> {
     this.db.prepare(`
       INSERT INTO outboxJobs
-      (actor, target, data, attempts, createdAt)
+      (actor, inbox, data, attempts, createdAt)
       VALUES
-      ($actor, $target, $data, $attempts, $createdAt)
+      ($actor, $inbox, $data, $attempts, $createdAt)
     `).run(job.toColumns());
   }
 
@@ -294,7 +294,7 @@ export class Database {
         CREATE TABLE outboxJobs (
           id BLOB PRIMARY KEY,
           actor STRING NON NULL REFERENCES users(username) ON DELETE CASCADE,
-          target STRING NON NULL,
+          inbox STRING NON NULL,
           data STRING NON NULL,
           attempts INTEGER NON NULL,
           createdAt INTEGER NON NULL

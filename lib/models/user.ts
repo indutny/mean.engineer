@@ -122,4 +122,8 @@ export class User implements UserAttributes {
 
     return timingSafeEqual(supplied, this.passwordHash);
   }
+
+  public isSame(other: User): boolean {
+    return this.username === other.username;
+  }
 }

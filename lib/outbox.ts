@@ -3,16 +3,19 @@ import LRU from 'lru-cache';
 import { createHash, createSign, randomUUID } from 'crypto';
 import createDebug from 'debug';
 import { setTimeout as sleep } from 'timers/promises';
+import pMap from 'p-map';
 
 import { USER_AGENT, BASE_URL, MAX_OUTBOX_JOB_ATTEMPTS } from './config.js';
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import { OutboxJob } from './models/outboxJob.js';
-import type { Activity } from './types/as.d';
+import { ACTOR_TYPES, type Activity } from './types/as.js';
 import { incrementalBackoff } from './util/incrementalBackoff.js';
 import { compact } from './util/jsonld.js';
 
 const debug = createDebug('me:outbox');
+
+const MAX_INBOX_FETCH_CONCURRENCY = 100;
 
 export type OutboxOptions = Readonly<{
   db: Database;
@@ -22,7 +25,7 @@ export type OutboxOptions = Readonly<{
 
 export class Outbox {
   private readonly db: Database;
-  private readonly inboxCache: LRU<string, string>;
+  private readonly inboxCache: LRU<string, URL>;
 
   constructor({
     db,
@@ -62,7 +65,37 @@ export class Outbox {
 
     debug(`accepting follow ${us} <- ${target}`);
 
-    await this.queueJob(user, target, data);
+    const inbox = await this.getInbox(target);
+    await this.queueJob(user, inbox, data);
+  }
+
+  public async sendActivity(user: User, activity: Activity): Promise<void> {
+    const {
+      bto,
+      bcc,
+      ...data
+    } = activity;
+
+    const {
+      to,
+      cc,
+    } = data;
+
+    const targets = [bto, bcc, to, cc].flat()
+      .filter((x: string | undefined): x is string => x !== undefined)
+      .map(x => new URL(x));
+
+    const inboxes = await pMap(targets, target => this.getInbox(target), {
+      concurrency: MAX_INBOX_FETCH_CONCURRENCY,
+      stopOnError: true,
+    });
+
+    // Deduplicate
+    const uniqueInboxes = [...new Set(inboxes)];
+
+    await Promise.all(uniqueInboxes.map(
+      inbox => this.queueJob(user, inbox, data),
+    ));
   }
 
   //
@@ -71,12 +104,12 @@ export class Outbox {
 
   private async queueJob(
     actor: User,
-    target: URL,
+    inbox: URL,
     data: OutboxJob['data'],
   ): Promise<void> {
     const job = OutboxJob.create({
       actor: actor.username,
-      target,
+      inbox,
       data,
       attempts: 0,
     });
@@ -107,8 +140,6 @@ export class Outbox {
             error,
           );
 
-          this.invalidateInbox(job.target);
-
           const delay = incrementalBackoff(currentJob.attempts);
           debug(
             `outbox job ${currentJob.getDebugId()} waiting for %dms`,
@@ -125,7 +156,7 @@ export class Outbox {
   private async runJob(job: OutboxJob): Promise<void> {
     const {
       actor: actorUsername,
-      target,
+      inbox,
       data,
     } = job;
 
@@ -135,10 +166,7 @@ export class Outbox {
       ...data,
     });
 
-    const [inbox, actor] = await Promise.all([
-      this.getInbox(target),
-      this.db.loadUser(actorUsername),
-    ]);
+    const actor = await this.db.loadUser(actorUsername);
     if (!actor) {
       debug(`job ${id}: user ${actorUsername} no longer exists`);
       return;
@@ -146,12 +174,10 @@ export class Outbox {
 
     const digest = createHash('sha256').update(json).digest('base64');
     const date = new Date().toUTCString();
-    const { host } = new URL(target);
-
-    const inboxURL = new URL(inbox);
+    const { host } = new URL(inbox);
 
     const plaintext = [
-      `(request-target): post ${inboxURL.pathname}${inboxURL.search}`,
+      `(request-target): post ${inbox.pathname}${inbox.search}`,
       `host: ${host}`,
       `date: ${date}`,
       `digest: sha-256=${digest}`,
@@ -181,7 +207,7 @@ export class Outbox {
 
     debug(
       `job ${id} making outgoing request to %j plaintext=%j headers=%j`,
-      inbox,
+      inbox.toString(),
       plaintext,
       headers,
     );
@@ -201,7 +227,7 @@ export class Outbox {
     }
   }
 
-  private async getInbox(target: URL): Promise<string> {
+  private async getInbox(target: URL): Promise<URL> {
     const cacheKey = target.toString();
     const cached = this.inboxCache.get(cacheKey);
     if (cached) {
@@ -217,13 +243,17 @@ export class Outbox {
 
     const json = await res.json();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { type, inbox } = (await compact(json)) as any;
-    assert.strictEqual(type, 'Person', 'Invalid actor type');
+    let { type, inbox, endpoints } = (await compact(json)) as any;
+    assert(ACTOR_TYPES.has(type), 'Invalid actor type');
+
+    inbox = endpoints?.sharedInbox || inbox;
     assert.strictEqual(typeof inbox, 'string', 'Missing inbox field');
 
-    this.inboxCache.set(cacheKey, inbox);
+    const url = new URL(inbox);
 
-    return inbox;
+    this.inboxCache.set(cacheKey, url);
+
+    return url;
   }
 
   private invalidateInbox(target: URL): void {

@@ -8,6 +8,7 @@ import { wrap } from '../middlewares/wrap.js';
 import type { User } from '../models/user.js';
 import type { Database } from '../db.js';
 import type { Inbox } from '../inbox.js';
+import type { Outbox } from '../outbox.js';
 import { paginate } from './util.js';
 
 const debug = createDebug('me:routes:users');
@@ -20,7 +21,13 @@ declare global {
   }
 }
 
-export default (db: Database, inbox: Inbox): Router => {
+export type UsersOptions = Readonly<{
+  db: Database;
+  inbox: Inbox;
+  outbox: Outbox;
+}>;
+
+export default ({ db, inbox, outbox }: UsersOptions): Router => {
   const router = Router();
 
   router.param('user', wrap(async (req, res, next, name) => {
@@ -106,6 +113,25 @@ export default (db: Database, inbox: Inbox): Router => {
   router.get('/:user/outbox', (req, res) => {
     res.status(500).send({ error: 'not implemented' });
   });
+
+  router.post('/:user/outbox', wrap(async (req, res) => {
+    const { user, targetUser } = req;
+    assert(targetUser, 'Must have user');
+
+    if (!user) {
+      res.status(401).send({ error: 'not authorized' });
+      return;
+    }
+
+    if (!user.isSame(targetUser)) {
+      res.status(403).send({ error: 'invalid authorization' });
+      return;
+    }
+
+    await outbox.sendActivity(user, req.body);
+
+    res.status(201).send();
+  }));
 
   router.get('/:user/followers', wrap(async (req, res) => {
     const { targetUser } = req;

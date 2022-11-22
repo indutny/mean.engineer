@@ -5,7 +5,7 @@ const ID_LEN = 16;
 export type OutboxJobAttributes = Readonly<{
   id: Buffer;
   actor: string;
-  target: URL;
+  inbox: URL;
   data: Record<string, unknown>;
   attempts: number;
   createdAt: Date;
@@ -18,17 +18,17 @@ export type NewOutboxJobAttributes = Omit<
 
 export type OutboxJobColumns = Omit<
   OutboxJobAttributes,
-  'data' | 'target' | 'createdAt'
+  'data' | 'inbox' | 'createdAt'
 > & Readonly<{
   data: string;
-  target: string;
+  inbox: string;
   createdAt: number;
 }>;
 
 export class OutboxJob {
   public readonly id: Buffer;
   public readonly actor: string;
-  public readonly target: URL;
+  public readonly inbox: URL;
   public readonly data: Record<string, unknown>;
   public readonly attempts: number;
   public readonly createdAt: Date;
@@ -36,7 +36,7 @@ export class OutboxJob {
   constructor(attributes: OutboxJobAttributes) {
     this.id = attributes.id;
     this.actor = attributes.actor;
-    this.target = attributes.target;
+    this.inbox = attributes.inbox;
     this.data = attributes.data;
     this.attempts = attributes.attempts;
     this.createdAt = attributes.createdAt;
@@ -53,7 +53,7 @@ export class OutboxJob {
   public toColumns(): OutboxJobColumns {
     return {
       ...this,
-      target: this.target.toString(),
+      inbox: this.inbox.toString(),
       createdAt: this.createdAt.getTime(),
       data: JSON.stringify(this.data),
     };
@@ -68,14 +68,14 @@ export class OutboxJob {
   }
 
   public static fromColumns({
-    target,
+    inbox,
     createdAt,
     data,
 
     ...attributes
   }: OutboxJobColumns): OutboxJob {
     return new OutboxJob({
-      target: new URL(target),
+      inbox: new URL(inbox),
       createdAt: new Date(createdAt),
       data: JSON.parse(data),
       ...attributes,

@@ -33,7 +33,7 @@ app.all('*', function (req, res, next) {
   next();
 });
 
-app.use(routes({ inbox, db }));
+app.use(routes({ inbox, outbox, db }));
 
 await outbox.runJobs();
 

@@ -2,7 +2,7 @@ import assert from 'assert';
 
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
-import type { Activity } from './types/as.d';
+import type { Activity } from './types/as';
 
 import type { Outbox } from './outbox.js';
 
