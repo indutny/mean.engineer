@@ -93,6 +93,7 @@ export class Outbox {
         try {
           currentJob = await this.db.incrementOutboxJobAttempts(currentJob);
           if (currentJob.attempts > MAX_OUTBOX_JOB_ATTEMPTS) {
+            await this.db.deleteOutboxJob(currentJob);
             debug(`outbox job ${currentJob.id} ran out of attempts`);
             return;
           }
@@ -104,6 +105,8 @@ export class Outbox {
             `outbox job ${currentJob.id} failed error=%j`,
             error,
           );
+
+          this.invalidateInbox(job.target);
 
           const delay = incrementalBackoff(currentJob.attempts);
           debug(
@@ -172,7 +175,6 @@ export class Outbox {
       headers,
     );
 
-    // TODO(indutny): invalidate cache on failure and retry?
     const res = await fetch(inbox, {
       method: 'POST',
       headers,

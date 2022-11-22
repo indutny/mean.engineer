@@ -200,6 +200,17 @@ export class Database {
     });
   }
 
+  public async deleteOutboxJob(
+    job: OutboxJob,
+  ): Promise<void> {
+    this.db.prepare(`
+      DELETE FROM outboxJobs
+      WHERE id = $id
+    `).run({
+      id: job.id,
+    });
+  }
+
   //
   // Private
   //
