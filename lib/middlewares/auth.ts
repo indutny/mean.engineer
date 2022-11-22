@@ -17,7 +17,6 @@ declare global {
 export function auth(db: Database): RequestHandler {
   return wrap(async (req, res, next) => {
     const header = req.get('authorization');
-    console.log('test', header);
     if (!header) {
       next();
       return;
