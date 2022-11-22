@@ -171,7 +171,7 @@ export class Database {
       (actor, target, data, attempts, createdAt)
       VALUES
       ($actor, $target, $data, $attempts, $createdAt)
-    `).pluck().get(job.toColumns());
+    `).run(job.toColumns());
   }
 
   public async getOutboxJobs(): Promise<ReadonlyArray<OutboxJob>> {

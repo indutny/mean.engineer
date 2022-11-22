@@ -44,7 +44,7 @@ export class Outbox {
       try {
         this.onJob(job);
       } catch (error) {
-        debug(`failed to run persisted job ${job.id} error=%j`, error);
+        debug(`failed to run persisted job ${job.getDebugId()} error=%j`, error);
       }
     }
   }
@@ -94,7 +94,7 @@ export class Outbox {
           currentJob = await this.db.incrementOutboxJobAttempts(currentJob);
           if (currentJob.attempts > MAX_OUTBOX_JOB_ATTEMPTS) {
             await this.db.deleteOutboxJob(currentJob);
-            debug(`outbox job ${currentJob.id} ran out of attempts`);
+            debug(`outbox job ${currentJob.getDebugId()} ran out of attempts`);
             return;
           }
 
@@ -103,7 +103,7 @@ export class Outbox {
           return;
         } catch (error) {
           debug(
-            `outbox job ${currentJob.id} failed error=%j`,
+            `outbox job ${currentJob.getDebugId()} failed error=%j`,
             error,
           );
 
@@ -111,7 +111,7 @@ export class Outbox {
 
           const delay = incrementalBackoff(currentJob.attempts);
           debug(
-            `outbox job ${currentJob.id} waiting for %dms`,
+            `outbox job ${currentJob.getDebugId()} waiting for %dms`,
             delay,
           );
           await sleep(delay);
@@ -122,12 +122,14 @@ export class Outbox {
     runWithRetry();
   }
 
-  private async runJob({
-    id,
-    actor: actorUsername,
-    target,
-    data,
-  }: OutboxJob): Promise<void> {
+  private async runJob(job: OutboxJob): Promise<void> {
+    const {
+      actor: actorUsername,
+      target,
+      data,
+    } = job;
+
+    const id = job.getDebugId();
     const json = JSON.stringify({
       '@context': 'https://www.w3.org/ns/activitystreams',
       ...data,

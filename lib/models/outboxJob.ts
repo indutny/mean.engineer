@@ -42,6 +42,10 @@ export class OutboxJob {
     this.createdAt = attributes.createdAt;
   }
 
+  public getDebugId(): string {
+    return this.id.toString('base64');
+  }
+
   public toAttributes(): OutboxJobAttributes {
     return { ...this };
   }
