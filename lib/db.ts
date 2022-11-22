@@ -178,9 +178,9 @@ export class Database {
   public async saveOutboxJob(job: OutboxJob): Promise<void> {
     this.db.prepare(`
       INSERT INTO outboxJobs
-      (actor, inbox, data, attempts, createdAt)
+      (id, actor, inbox, data, attempts, createdAt)
       VALUES
-      ($actor, $inbox, $data, $attempts, $createdAt)
+      ($id, $actor, $inbox, $data, $attempts, $createdAt)
     `).run(job.toColumns());
   }
 
