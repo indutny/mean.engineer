@@ -80,6 +80,7 @@ export class Outbox {
     const [inbox] = await this.getInboxes(target, {
       resolve: false,
     });
+    assert(inbox !== undefined, `Did not get an inbox for ${target}`);
     await this.queueJob(user, inbox, data);
   }
 
@@ -301,7 +302,7 @@ export class Outbox {
 
   private async getLocalInboxes(
     target: URL,
-    { resolve }: GetInboxesOptions
+    options: GetInboxesOptions
   ): Promise<ReadonlyArray<URL>> {
     assert(!target.search, 'Queries are not allowed for local inboxes');
 
@@ -316,12 +317,25 @@ export class Outbox {
       /^\/users\/([^/]+)\/followers$/
     );
     if (followersMatch) {
-      assert(resolve, `Refuse to resolve local followers for ${target}`);
+      assert(
+        options.resolve,
+        `Refuse to resolve local followers for ${target}`,
+      );
 
       const user = await this.db.loadUser(followersMatch[1]);
       assert(user, `Local user ${followersMatch[1]} not found`);
 
-      return this.db.getFollowers(user.getURL());
+      const followers = await this.db.getFollowers(user.getURL());
+      const inboxes = await pMap(
+        followers,
+        follower => this.getInboxes(follower, options),
+        {
+          concurrency: MAX_INBOX_FETCH_CONCURRENCY,
+          stopOnError: true,
+        },
+      );
+
+      return inboxes.flat();
     }
 
     throw new Error(`Failed to parse local url ${target}`);
