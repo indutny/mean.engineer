@@ -1,8 +1,9 @@
+import FastifyPlugin from 'fastify-plugin';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import assert from 'assert';
 import { createVerify } from 'crypto';
 import LRU from 'lru-cache';
 import createDebug from 'debug';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 import { compact } from '../util/jsonld.js';
 import { USER_AGENT } from '../config.js';
@@ -144,7 +145,7 @@ export class Verifier {
   }
 }
 
-export async function verifySignatureHeader(
+async function verifySignatureHeader(
   fastify: FastifyInstance,
   options?: VerifySignatureOptions,
 ): Promise<void> {
@@ -165,3 +166,5 @@ export async function verifySignatureHeader(
     return undefined;
   });
 }
+
+export default FastifyPlugin(verifySignatureHeader);

@@ -1,11 +1,12 @@
+import FastifyPlugin from 'fastify-plugin';
+import type { FastifyInstance } from 'fastify';
 import assert from 'assert';
 import { createHash, timingSafeEqual } from 'crypto';
-import type { FastifyInstance } from 'fastify';
 import createDebug from 'debug';
 
 const debug = createDebug('me:bodyVerifier');
 
-export async function verifyBodyDigest(
+async function verifyBodyDigest(
   fastify: FastifyInstance,
 ): Promise<void> {
   fastify.addHook<{
@@ -46,3 +47,5 @@ export async function verifyBodyDigest(
     return undefined;
   });
 }
+
+export default FastifyPlugin(verifyBodyDigest);

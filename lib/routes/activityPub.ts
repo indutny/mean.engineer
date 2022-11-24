@@ -2,9 +2,9 @@ import assert from 'assert';
 import { type FastifyInstance } from 'fastify';
 import createDebug from 'debug';
 
-import { auth } from '../plugins/auth.js';
-import { verifyBodyDigest } from '../plugins/verifyBodyDigest.js';
-import { verifySignatureHeader } from '../plugins/verifySignatureHeader.js';
+import auth from '../plugins/auth.js';
+import verifyBodyDigest from '../plugins/verifyBodyDigest.js';
+import verifySignatureHeader from '../plugins/verifySignatureHeader.js';
 import { paginateResponse } from '../util/paginateResponse.js';
 import { isSameHost } from '../util/isSameHost.js';
 import type { User } from '../models/user.js';
