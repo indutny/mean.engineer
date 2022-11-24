@@ -3,8 +3,6 @@ import { type FastifyInstance } from 'fastify';
 import { BASE_URL, HOST } from '../config.js';
 
 export default async (fastify: FastifyInstance): Promise<void> => {
-  // TODO(indutny): add cors back
-
   fastify.get('/.well-known/host-meta', (request, reply) => {
     reply.type('application/xrd+xml; charset=utf-8').send([
       '<?xml version="1.0" encoding="UTF-8"?>',

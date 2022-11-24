@@ -1,4 +1,5 @@
 import { type FastifyInstance } from 'fastify';
+import formbody from '@fastify/formbody';
 
 import {
   HOST,
@@ -15,6 +16,8 @@ import {
 } from '../config.js';
 
 export default async (fastify: FastifyInstance): Promise<void> => {
+  fastify.register(formbody);
+
   fastify.get('/api/v1/instance', () => {
     return {
       uri: HOST,

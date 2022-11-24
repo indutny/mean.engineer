@@ -1,5 +1,6 @@
 import assert from 'assert';
 import { type FastifyInstance } from 'fastify';
+import acceptSerializer from '@fastify/accepts-serializer';
 import createDebug from 'debug';
 
 import auth from '../plugins/auth.js';
@@ -19,7 +20,16 @@ declare module 'fastify' {
 }
 
 export default async (fastify: FastifyInstance): Promise<void> => {
-  // TODO(indutny): cors
+  // TODO(indutny): html serializer?
+  fastify.register(acceptSerializer, {
+    serializers: [{
+      regex: /^application\/(ld|activity)\+json$/,
+      serializer(body) {
+        return JSON.stringify(body);
+      }
+    }],
+    default: 'application/activity+json',
+  });
 
   fastify.addHook<{
     Params: { user?: string }
@@ -44,13 +54,12 @@ export default async (fastify: FastifyInstance): Promise<void> => {
 
   // TODO(indutny): use @fastify/accepts-serializer
 
-  fastify.get('/users/:user', (request, reply) => {
+  fastify.get('/users/:user', (request) => {
     const { targetUser } = request;
     assert(targetUser, 'Must have targetUser');
 
     const url = targetUser.getURL();
 
-    reply.type('application/activity+json');
     return {
       '@context': 'https://www.w3.org/ns/activitystreams',
       id: url,
