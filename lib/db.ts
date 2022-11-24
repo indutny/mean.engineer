@@ -10,7 +10,6 @@ export type Paginated<Row> = Readonly<{
   totalRows: number;
   rows?: ReadonlyArray<Row>;
   hasMore: boolean;
-  pages: number;
 }>;
 
 export type FollowOptions = Readonly<{
@@ -264,7 +263,6 @@ export class Database {
       totalRows,
       rows,
       hasMore,
-      pages: Math.ceil(totalRows / DB_PAGE_SIZE),
     };
   }
 
