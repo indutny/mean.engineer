@@ -11,11 +11,16 @@ async function verifyBodyDigest(
 ): Promise<void> {
   fastify.addHook<{
     Headers: { digest?: string };
-    Body: string | Buffer;
-  }>('preParsing', async (request, reply) => {
+  }>('preValidation', async (request, reply) => {
     const { digest } = request.headers;
     if (digest === undefined) {
       return;
+    }
+
+    const { rawBody } = request;
+    if (rawBody === undefined) {
+      reply.status(400).send({ error: 'Missing body for digest header' });
+      return reply;
     }
 
     const match = digest.match(/^([^=]*)=(.*)$/);
@@ -31,7 +36,7 @@ async function verifyBodyDigest(
     const expected = Buffer.from(expectedBase64, 'base64');
 
     const h = createHash('sha256');
-    h.update(request.body);
+    h.update(rawBody);
 
     const actual = h.digest();
     if (!timingSafeEqual(actual, expected)) {

@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto';
+import sjson from 'secure-json-parse';
 
 const ID_LEN = 16;
 
@@ -77,7 +78,7 @@ export class OutboxJob {
     return new OutboxJob({
       inbox: new URL(inbox),
       createdAt: new Date(createdAt),
-      data: JSON.parse(data),
+      data: sjson.parse(data),
       ...attributes,
     });
   }

@@ -1,4 +1,5 @@
 import { readFileSync } from 'fs';
+import sjson from 'secure-json-parse';
 import * as badJSONLD from 'jsonld';
 
 // Sadly types for JSONLD are really off.
@@ -8,7 +9,7 @@ const jsonld = (badJSONLD as any).default;
 function json(file: string): unknown {
   const url = new URL(`../../contexts/${file}`, import.meta.url);
   const content = readFileSync(url);
-  return JSON.parse(content.toString());
+  return sjson.parse(content.toString());
 }
 
 const CONTEXT_MAP = new Map<string, unknown>([
