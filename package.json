@@ -20,6 +20,7 @@
     "better-sqlite3": "github:indutny/better-sqlcipher#cab28cdcbefc4d240dcd123a0aed089fb0a7d155",
     "debug": "^4.3.4",
     "fastify": "^4.10.2",
+    "fastify-plugin": "^4.3.0",
     "jsonld": "^8.1.0",
     "lru-cache": "^7.14.1",
     "p-map": "^5.5.0",
