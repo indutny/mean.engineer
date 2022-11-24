@@ -36,12 +36,12 @@ export async function paginateResponse(
   if (pageString && typeof pageString === 'string') {
     page = parseInt(pageString, 10);
     if (page.toString() !== pageString) {
-      reply.status(400);
+      reply.badRequest();
       return { error: 'Invalid page' };
     }
 
     if (page < 1) {
-      reply.status(400);
+      reply.badRequest();
       return { error: 'Invalid page' };
     }
 

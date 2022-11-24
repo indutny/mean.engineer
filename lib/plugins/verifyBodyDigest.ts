@@ -1,6 +1,5 @@
 import FastifyPlugin from 'fastify-plugin';
 import type { FastifyInstance } from 'fastify';
-import assert from 'assert';
 import { createHash, timingSafeEqual } from 'crypto';
 import createDebug from 'debug';
 
@@ -18,18 +17,15 @@ async function verifyBodyDigest(
     }
 
     const { rawBody } = request;
-    if (rawBody === undefined) {
-      reply.status(400).send({ error: 'Missing body for digest header' });
-      return reply;
-    }
+    fastify.assert(rawBody, 400, 'Missing body for Digest header');
 
     const match = digest.match(/^([^=]*)=(.*)$/);
-    assert(match, 'Invalid digest header');
+    fastify.assert(match, 400, 'Invalid digest header');
 
     const [, algorithm, expectedBase64] = match;
-    assert.strictEqual(
-      algorithm.toLowerCase(),
-      'sha-256',
+    fastify.assert(
+      algorithm.toLowerCase() === 'sha-256',
+      400,
       'Only SHA-256 body digest is supported',
     );
 
@@ -45,8 +41,7 @@ async function verifyBodyDigest(
         actual.toString('base64'),
         expected.toString('base64'),
       );
-      reply.status(400).send({ error: 'Invalid body digest' });
-      return reply;
+      return reply.badRequest('Invalid body digest');
     }
 
     return undefined;

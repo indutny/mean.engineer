@@ -1,15 +1,11 @@
 import FastifyPlugin from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import assert from 'assert';
 import { createVerify } from 'crypto';
 import LRU from 'lru-cache';
-import createDebug from 'debug';
 
 import { compact } from '../util/jsonld.js';
 import { USER_AGENT } from '../config.js';
 import { HOUR } from '../constants.js';
-
-const debug = createDebug('me:verify-signature');
 
 const MAX_AGE = 12 * HOUR;
 const SKEW = HOUR;
@@ -41,7 +37,7 @@ interface Headers extends Record<string, string | undefined> {
 export class Verifier {
   private readonly cache: LRU<string, string>;
 
-  constructor({
+  constructor(private readonly fastify: FastifyInstance, {
     cacheSize = 100,
     cacheTTL = HOUR,
   }: VerifySignatureOptions = {}) {
@@ -51,28 +47,30 @@ export class Verifier {
   public async verify(
     request: FastifyRequest<{ Headers: Headers }>,
   ): Promise<SenderKey | undefined> {
+    const fastify: FastifyInstance = this.fastify;
+
     const { signature: signatureString } = request.headers;
     if (signatureString === undefined) {
       return undefined;
     }
 
     const keyMatch = signatureString.match(/keyId="([^"]*)#([^"]*)"/);
-    assert(keyMatch, 'Missing or invalid keyId');
+    fastify.assert(keyMatch, 400, 'Missing or invalid keyId');
     const algorithmMatch = signatureString.match(/algorithm="([^"]*)"/);
-    assert(algorithmMatch, 'Missing or invalid algorithm');
+    fastify.assert(algorithmMatch, 400, 'Missing or invalid algorithm');
     const signatureMatch = signatureString.match(/signature="([^"]*)"/);
-    assert(signatureMatch, 'Missing or invalid signature');
+    fastify.assert(signatureMatch, 400, 'Missing or invalid signature');
     const headersMatch = signatureString.match(/headers="([^"]*)"/);
-    assert(headersMatch, 'Missing or invalid headers');
+    fastify.assert(headersMatch, 400, 'Missing or invalid headers');
 
     const [,owner,id] = keyMatch;
     const [,algorithm ] = algorithmMatch;
     const [,signatureBase64] = signatureMatch;
     const headers = headersMatch[1].split(' ');
 
-    assert.strictEqual(
-      algorithm,
-      'rsa-sha256',
+    fastify.assert(
+      algorithm === 'rsa-sha256',
+      400,
       'Unsupported signature algorithm',
     );
 
@@ -91,21 +89,18 @@ export class Verifier {
 
     const v = createVerify('RSA-SHA256');
     v.update(plaintext);
-    if (!v.verify(publicKey, signature)) {
-      throw new Error('Invalid signature');
-    }
+    fastify.assert(v.verify(publicKey, signature), 400, 'Invalid signature');
 
     const age = Date.now() - new Date(
       request.headers.date ?? Date.now()
     ).getTime();
-    if (age > MAX_AGE + SKEW) {
-      throw new Error('Request is too old');
-    }
+    fastify.assert(age <= MAX_AGE + SKEW, 400, 'Request is too old');
 
     return { owner, id };
   }
 
   private async getPublicKey(owner: string, id: string): Promise<string> {
+    const fastify: FastifyInstance = this.fastify;
     const fullId = `${owner}#${id}`;
 
     const cached = this.cache.get(fullId);
@@ -127,17 +122,21 @@ export class Verifier {
     type LD = Readonly<{ publicKey: string | ReadonlyArray<string> }>;
 
     const { publicKey } = ld as LD;
-    assert(publicKey, 'Remote did not return public key');
+    fastify.assert(publicKey, 404, 'Remote did not return public key');
 
     const publicKeys = Array.isArray(publicKey) ? publicKey : [publicKey];
 
     const key = publicKeys.find((remoteKey) => {
       return remoteKey?.id === fullId && remoteKey?.owner === owner;
     });
-    assert(key, 'Remote does not have desired public key');
+    fastify.assert(key, 404, 'Remote does not have desired public key');
 
     const { publicKeyPem } = key;
-    assert.strictEqual(typeof publicKeyPem, 'string', 'Missing public key PEM');
+    fastify.assert(
+      typeof publicKeyPem === 'string',
+      404,
+      'Missing remote public key PEM',
+    );
 
     this.cache.set(fullId, publicKeyPem);
 
@@ -149,21 +148,12 @@ async function verifySignatureHeader(
   fastify: FastifyInstance,
   options?: VerifySignatureOptions,
 ): Promise<void> {
-  const v = new Verifier(options);
+  const v = new Verifier(fastify, options);
 
   fastify.addHook<{
     Headers: Headers;
-  }>('preValidation', async (request, reply) => {
-    try {
-      request.senderKey = await v.verify(request);
-    } catch (error) {
-      debug('got verify error', error);
-      reply.status(400)
-        .send({ error: 'Invalid signature', details: error.message });
-      return reply;
-    }
-
-    return undefined;
+  }>('preValidation', async (request) => {
+    request.senderKey = await v.verify(request);
   });
 }
 

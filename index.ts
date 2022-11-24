@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import FastifySensible from '@fastify/sensible';
 
 import { Database } from './lib/db.js';
 import { Inbox } from './lib/inbox.js';
@@ -35,6 +36,7 @@ fastify
   .decorate('outbox', outbox)
   .decorate('inbox', inbox);
 
+fastify.register(FastifySensible);
 fastify.register(jsonld);
 fastify.register(routes);
 

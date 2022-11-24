@@ -18,32 +18,25 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     // TODO(indutny): response schema
   }>('/.well-known/webfinger', async (request, reply) => {
     const { resource } = request.query;
-    if (typeof resource !== 'string') {
-      reply.status(400);
-      return { error: 'Invalid or missing resource query' };
-    }
+    fastify.assert(
+      resource,
+      400,
+      'Invalid or missing resource query',
+    );
 
     const accountMatch = resource.match(/^acct:(.*)@(.*)$/);
-    if (!accountMatch) {
-      reply.status(404);
-      return { error: 'Invalid resource query' };
-    }
+    fastify.assert(accountMatch, 404, 'Invalid resource query');
 
     const [, account, accountHost] = accountMatch;
-    if (accountHost !== HOST) {
-      reply.status(404);
-      return { error: 'Invalid account hostname' };
-    }
+    fastify.assert(accountHost === HOST, 404, 'Invalid account hostname');
 
     const user = await fastify.db.loadUser(account);
-    if (!user) {
-      reply.status(404);
-      return { error: 'Local user not found' };
-    }
+    fastify.assert(user, 404, 'Local user not found');
 
     const accountUrl = new URL(`./@${user.username}`, BASE_URL);
     const url = user.getURL();
 
+    reply.type('application/jrd+json');
     return {
       subject: resource,
       aliases: [

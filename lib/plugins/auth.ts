@@ -20,10 +20,7 @@ async function auth(fastify: FastifyInstance): Promise<void> {
     }
 
     const match = authorization.match(/^Bearer\s+([^\s]*):([^\s]*)$/i);
-    if (!match) {
-      reply.status(400).send({ error: 'Invalid Authorization header' });
-      return reply;
-    }
+    fastify.assert(match, 400, 'Invalid Authorization header');
 
     let isValid = false;
     let token: AuthToken | undefined;
@@ -33,25 +30,21 @@ async function auth(fastify: FastifyInstance): Promise<void> {
 
       token = await fastify.db.loadAuthToken(id);
       if (!token) {
-        reply.status(403).send({ error: 'Incorrect token' });
-        return reply;
+        return reply.forbidden('Incorrect token');
       }
 
       isValid = await token.authenticate(plaintext);
     } catch (error) {
-      reply.status(400).send({ error: 'Bad token' });
-      return reply;
+      return reply.badRequest('Bad token');
     }
 
     if (!isValid) {
-      reply.status(403).send({ error: 'Incorrect token' });
-      return reply;
+      return reply.forbidden('Incorrect token');
     }
 
     request.user = await fastify.db.loadUser(token.username);
     if (!request.user) {
-      reply.status(403).send({ error: 'Incorrect token' });
-      return reply;
+      return reply.forbidden('Incorrect token');
     }
 
     return undefined;

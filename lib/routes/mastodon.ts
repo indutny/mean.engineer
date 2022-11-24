@@ -75,7 +75,6 @@ export default async (fastify: FastifyInstance): Promise<void> => {
 
   // TODO(indutny): Sign-in flow for Toot!
   fastify.post('/api/v1/apps', (_request, reply) => {
-    reply.status(404);
-    return { error: 'oops' };
+    return reply.internalServerError('not implemented');
   });
 };

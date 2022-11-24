@@ -1,4 +1,3 @@
-import assert from 'assert';
 import { type FastifyInstance } from 'fastify';
 import acceptSerializer from '@fastify/accepts-serializer';
 import createDebug from 'debug';
@@ -44,8 +43,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     request.targetUser = await fastify.db.loadUser(request.params.user);
 
     if (!request.targetUser) {
-      reply.status(404).send({ error: 'target user not found' });
-      return reply;
+      return reply.notFound('target user not found');
     }
 
     return undefined;
@@ -59,7 +57,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
 
   fastify.get('/users/:user', (request) => {
     const { targetUser } = request;
-    assert(targetUser, 'Must have targetUser');
+    fastify.assert(targetUser, 400, 'Missing target user');
 
     const url = targetUser.getURL();
 
@@ -86,8 +84,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
   });
 
   fastify.get('/users/:user/outbox', (request, reply) => {
-    reply.status(500);
-    return { error: 'not implemented' };
+    return reply.internalServerError('not implemented');
   });
 
   fastify.post<{
@@ -95,22 +92,19 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     Body: Activity;
   }>('/users/:user/outbox', async (request, reply) => {
     const { user, targetUser } = request;
-    assert(targetUser, 'Must have user');
+    fastify.assert(targetUser, 400, 'Missing target user');
 
     if (!user) {
-      reply.status(401);
-      return { error: 'not authorized' };
+      return reply.unauthorized();
     }
 
     if (!user.isSame(targetUser)) {
-      reply.status(403);
-      return { error: 'invalid authorization' };
+      return reply.forbidden('invalid authorization');
     }
 
     await fastify.outbox.sendActivity(user, request.body);
 
-    reply.status(201);
-    return undefined;
+    return reply.status(201);
   });
 
   fastify.get<{
@@ -118,7 +112,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     Reply: PaginateReply;
   }>('/users/:user/followers', async (request, reply) => {
     const { targetUser } = request;
-    assert(targetUser, 'Must have user');
+    fastify.assert(targetUser, 400, 'Missing target user');
 
     const userURL = targetUser.getURL();
 
@@ -134,7 +128,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     Reply: PaginateReply;
   }>('/users/:user/following', async (request, reply) => {
     const { targetUser } = request;
-    assert(targetUser, 'Must have targetUser');
+    fastify.assert(targetUser, 400, 'Missing target user');
 
     const userURL = targetUser.getURL();
 
@@ -146,20 +140,18 @@ export default async (fastify: FastifyInstance): Promise<void> => {
   });
 
   fastify.get('/users/:user/inbox', async (request, reply) => {
-    reply.status(500);
-    return { error: 'not implemented' };
+    reply.internalServerError('not implemented');
   });
 
   fastify.post<{
     Body: Activity;
   }>('/users/:user/inbox', async (request, reply) => {
     if (!request.senderKey) {
-      reply.status(401);
-      return { error: 'Signature is required' };
+      return reply.unauthorized('Signature header is required');
     }
 
     const { targetUser } = request;
-    assert(targetUser, 'Must have targetUser');
+    fastify.assert(targetUser, 400, 'Missing target user');
 
     type Body = Readonly<{
       id: string;
@@ -168,25 +160,21 @@ export default async (fastify: FastifyInstance): Promise<void> => {
 
     const { id, actor } = request.body as Body;
     if (request.senderKey.owner !== actor) {
-      reply.status(403);
-      return { error: 'Signature does not match actor' };
+      return reply.forbidden('Signature does not match actor');
     }
 
     // Can't squat others ids!
     if (id && !isSameHost(new URL(id), new URL(actor))) {
       debug('invalid activity origin body=%O', request.body);
-      reply.status(400);
-      return { error: 'Invalid activity origin' };
+      return reply.badRequest('Invalid activity origin');
     }
 
     try {
       await fastify.inbox.handleActivity(targetUser, request.body);
-      reply.status(202);
-      return;
+      return reply.status(202);
     } catch (error) {
       debug('failed to handle activity %j %O', request.body, error);
-      reply.status(500);
-      return { error: error.message };
+      return reply.internalServerError(error.stack);
     }
   });
 };
