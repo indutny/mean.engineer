@@ -8,11 +8,25 @@ export type PaginateOptions = Readonly<{
   getData(page?: number): Promise<Paginated<URL>>;
 }>;
 
+export type PaginateReply = Readonly<{
+  error: string;
+} | {
+  '@context': 'https://www.w3.org/ns/activitystreams';
+  id: URL;
+  type: 'OrderedCollection' | 'OrderedCollectionPage';
+  summary?: string;
+  totalItems: number;
+  partOf?: URL;
+  first?: URL;
+  next?: URL;
+  orderedItems?: ReadonlyArray<URL>;
+}>;
+
 export async function paginateResponse(
   request: FastifyRequest<{ Querystring: { page?: string } }>,
   reply: FastifyReply,
   { url, summary, getData } : PaginateOptions,
-): Promise<void> {
+): Promise<PaginateReply> {
   const { page: pageString } = request.query;
 
   let page: number | undefined;
@@ -22,13 +36,13 @@ export async function paginateResponse(
   if (pageString && typeof pageString === 'string') {
     page = parseInt(pageString, 10);
     if (page.toString() !== pageString) {
-      reply.status(400).send({ error: 'Invalid page' });
-      return;
+      reply.status(400);
+      return { error: 'Invalid page' };
     }
 
     if (page < 1) {
-      reply.status(400).send({ error: 'Invalid page' });
-      return;
+      reply.status(400);
+      return { error: 'Invalid page' };
     }
 
     // To be returned to requestor
@@ -45,23 +59,23 @@ export async function paginateResponse(
   } = await getData(dbPage);
 
   if (page === undefined) {
-    reply.status(200).type('application/activity+json').send({
+    return {
       '@context': 'https://www.w3.org/ns/activitystreams',
+      id: url,
       type: 'OrderedCollection',
       summary,
       totalItems: totalRows,
       first: totalRows > 0 ? new URL('?page=1', url) : undefined,
-    });
-    return;
+    };
   }
 
-  reply.status(200).type('application/activity+json').send({
+  return {
     '@context': 'https://www.w3.org/ns/activitystreams',
-    id: page === undefined ? url : new URL(`?page=${page}`, url),
+    id: new URL(`?page=${page}`, url),
     type: 'OrderedCollectionPage',
     totalItems: totalRows,
     partOf: url,
     next: hasMore ? new URL(`?page=${nextPage}`, url) : undefined,
     orderedItems: rows,
-  });
+  };
 }

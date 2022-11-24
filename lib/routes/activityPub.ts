@@ -6,7 +6,10 @@ import createDebug from 'debug';
 import auth from '../plugins/auth.js';
 import verifyBodyDigest from '../plugins/verifyBodyDigest.js';
 import verifySignatureHeader from '../plugins/verifySignatureHeader.js';
-import { paginateResponse } from '../util/paginateResponse.js';
+import {
+  paginateResponse,
+  type PaginateReply,
+} from '../util/paginateResponse.js';
 import { isSameHost } from '../util/isSameHost.js';
 import type { User } from '../models/user.js';
 import type { Activity } from '../types/as.js';
@@ -112,13 +115,14 @@ export default async (fastify: FastifyInstance): Promise<void> => {
 
   fastify.get<{
     Querystring: { page?: string };
+    Reply: PaginateReply;
   }>('/users/:user/followers', async (request, reply) => {
     const { targetUser } = request;
     assert(targetUser, 'Must have user');
 
     const userURL = targetUser.getURL();
 
-    await paginateResponse(request, reply, {
+    return paginateResponse(request, reply, {
       url: new URL(`${userURL}/followers`),
       summary: `${targetUser.profileName}'s followers`,
       getData: (page) => fastify.db.getPaginatedFollowers(userURL, page),
@@ -127,13 +131,14 @@ export default async (fastify: FastifyInstance): Promise<void> => {
 
   fastify.get<{
     Querystring: { page?: string };
+    Reply: PaginateReply;
   }>('/users/:user/following', async (request, reply) => {
     const { targetUser } = request;
     assert(targetUser, 'Must have targetUser');
 
     const userURL = targetUser.getURL();
 
-    await paginateResponse(request, reply, {
+    return paginateResponse(request, reply, {
       url: new URL(`${userURL}/following`),
       summary: `${targetUser.profileName}'s following`,
       getData: (page) => fastify.db.getPaginatedFollowing(userURL, page),
