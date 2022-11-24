@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import type { Paginated } from '../db.js';
 
@@ -9,11 +9,11 @@ export type PaginateOptions = Readonly<{
 }>;
 
 export async function paginateResponse(
-  req: Request,
-  res: Response,
+  request: FastifyRequest<{ Querystring: { page?: string } }>,
+  reply: FastifyReply,
   { url, summary, getData } : PaginateOptions,
 ): Promise<void> {
-  const { page: pageString } = req.query;
+  const { page: pageString } = request.query;
 
   let page: number | undefined;
   let nextPage = 1;
@@ -22,12 +22,12 @@ export async function paginateResponse(
   if (pageString && typeof pageString === 'string') {
     page = parseInt(pageString, 10);
     if (page.toString() !== pageString) {
-      res.status(400).send({ error: 'Invalid page' });
+      reply.status(400).send({ error: 'Invalid page' });
       return;
     }
 
     if (page < 1) {
-      res.status(400).send({ error: 'Invalid page' });
+      reply.status(400).send({ error: 'Invalid page' });
       return;
     }
 
@@ -45,7 +45,7 @@ export async function paginateResponse(
   } = await getData(dbPage);
 
   if (page === undefined) {
-    res.status(200).type('application/activity+json').send({
+    reply.status(200).type('application/activity+json').send({
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'OrderedCollection',
       summary,
@@ -55,7 +55,7 @@ export async function paginateResponse(
     return;
   }
 
-  res.status(200).type('application/activity+json').send({
+  reply.status(200).type('application/activity+json').send({
     '@context': 'https://www.w3.org/ns/activitystreams',
     id: page === undefined ? url : new URL(`?page=${page}`, url),
     type: 'OrderedCollectionPage',

@@ -1,6 +1,6 @@
 import assert from 'assert';
 
-const SECOND = 1000;
+import { SECOND } from '../constants.js';
 
 const FIBONACCI = [
   1,

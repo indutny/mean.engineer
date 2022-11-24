@@ -17,6 +17,7 @@ import { OutboxJob } from './models/outboxJob.js';
 import { ACTOR_TYPES, type Activity } from './types/as.js';
 import { incrementalBackoff } from './util/incrementalBackoff.js';
 import { compact } from './util/jsonld.js';
+import { HOUR } from './constants.js';
 
 const debug = createDebug('me:outbox');
 
@@ -39,7 +40,7 @@ export class Outbox {
   constructor({
     db,
     cacheSize = 100,
-    cacheTTL = 3600 * 1000,
+    cacheTTL = HOUR,
   }: OutboxOptions) {
     this.db = db;
     this.inboxCache = new LRU({

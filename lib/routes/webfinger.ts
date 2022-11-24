@@ -1,17 +1,12 @@
-import { Router } from 'express';
-import cors from 'cors';
+import { type FastifyInstance } from 'fastify';
 
 import { BASE_URL, HOST } from '../config.js';
-import type { Database } from '../db.js';
-import { wrap } from '../middlewares/wrap.js';
 
-export default (db: Database): Router => {
-  const router = Router();
+export default async (fastify: FastifyInstance): Promise<void> => {
+  // TODO(indutny): add cors back
 
-  router.use(cors());
-
-  router.get('/host-meta', (req, res) => {
-    res.type('application/xrd+xml; charset=utf-8').send([
+  fastify.get('/.well-known/host-meta', (request, reply) => {
+    reply.type('application/xrd+xml; charset=utf-8').send([
       '<?xml version="1.0" encoding="UTF-8"?>',
       '<XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">',
       `  <Link rel="lrdd" template="${BASE_URL}` +
@@ -20,35 +15,38 @@ export default (db: Database): Router => {
     ].join('\n'));
   });
 
-  router.get('/webfinger', wrap(async (req, res) => {
-    const { resource } = req.query;
+  fastify.get<{
+    Querystring: { resource?: string };
+    // TODO(indutny): response schema
+  }>('/.well-known/webfinger', async (request, reply) => {
+    const { resource } = request.query;
     if (typeof resource !== 'string') {
-      res.status(400).send({ error: 'Invalid or missing resource query' });
-      return;
+      reply.status(400);
+      return { error: 'Invalid or missing resource query' };
     }
 
     const accountMatch = resource.match(/^acct:(.*)@(.*)$/);
     if (!accountMatch) {
-      res.status(404).send({ error: 'Not found' });
-      return;
+      reply.status(404);
+      return { error: 'Invalid resource query' };
     }
 
     const [, account, accountHost] = accountMatch;
     if (accountHost !== HOST) {
-      res.status(404).send({ error: 'Not found' });
-      return;
+      reply.status(404);
+      return { error: 'Invalid account hostname' };
     }
 
-    const user = await db.loadUser(account);
+    const user = await fastify.db.loadUser(account);
     if (!user) {
-      res.status(404).send({ error: 'User not found' });
-      return;
+      reply.status(404);
+      return { error: 'Local user not found' };
     }
 
     const accountUrl = new URL(`./@${user.username}`, BASE_URL);
     const url = user.getURL();
 
-    res.send({
+    return {
       subject: resource,
       aliases: [
         accountUrl,
@@ -71,8 +69,6 @@ export default (db: Database): Router => {
           template: new URL('./authorize_interaction?uri={uri}', BASE_URL),
         }
       ]
-    });
-  }));
-
-  return router;
+    };
+  });
 };

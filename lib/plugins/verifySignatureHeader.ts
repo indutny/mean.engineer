@@ -1,24 +1,24 @@
 import assert from 'assert';
 import { createVerify } from 'crypto';
 import LRU from 'lru-cache';
-import type { Request, RequestHandler } from 'express';
 import createDebug from 'debug';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 import { compact } from '../util/jsonld.js';
 import { USER_AGENT } from '../config.js';
-import { wrap } from './wrap.js';
+import { HOUR } from '../constants.js';
 
 const debug = createDebug('me:verify-signature');
 
-const MAX_AGE = 12 * 3600 * 1000;
-const SKEW = 3600 * 1000;
+const MAX_AGE = 12 * HOUR;
+const SKEW = HOUR;
 
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace Express {
-    interface Request {
-      senderKey?: SenderKey;
-    }
+declare module 'fastify' {
+  interface FastifyRequest {
+    senderKey?: SenderKey;
+  }
+  interface FastifyReply {
+    myPluginProp: number
   }
 }
 
@@ -32,19 +32,26 @@ export type VerifySignatureOptions = Readonly<{
   cacheTTL?: number;
 }>;
 
+interface Headers extends Record<string, string | undefined> {
+  signature?: string;
+  date?: string;
+}
+
 export class Verifier {
   private readonly cache: LRU<string, string>;
 
   constructor({
     cacheSize = 100,
-    cacheTTL = 3600 * 1000,
+    cacheTTL = HOUR,
   }: VerifySignatureOptions = {}) {
     this.cache = new LRU({ max: cacheSize, ttl: cacheTTL });
   }
 
-  public async verify(req: Request): Promise<SenderKey | undefined> {
-    const signatureString = req.get('signature');
-    if (!signatureString) {
+  public async verify(
+    request: FastifyRequest<{ Headers: Headers }>,
+  ): Promise<SenderKey | undefined> {
+    const { signature: signatureString } = request.headers;
+    if (signatureString === undefined) {
       return undefined;
     }
 
@@ -72,10 +79,10 @@ export class Verifier {
 
     const plaintext = headers.map((key) => {
       if (key === '(request-target)') {
-        return `${key}: ${req.method.toLowerCase()} ${req.originalUrl}`;
+        return `${key}: ${request.method.toLowerCase()} ${request.url}`;
       }
 
-      return `${key}: ${req.get(key) ?? ''}`;
+      return `${key}: ${request.headers[key] ?? ''}`;
     }).join('\n');
 
     // TODO(indutny): invidate cache on error and retry
@@ -87,7 +94,9 @@ export class Verifier {
       throw new Error('Invalid signature');
     }
 
-    const age = Date.now() - new Date(req.get('date') ?? Date.now()).getTime();
+    const age = Date.now() - new Date(
+      request.headers.date ?? Date.now()
+    ).getTime();
     if (age > MAX_AGE + SKEW) {
       throw new Error('Request is too old');
     }
@@ -135,21 +144,24 @@ export class Verifier {
   }
 }
 
-export default function verifySignature(
+export async function verifySignatureHeader(
+  fastify: FastifyInstance,
   options?: VerifySignatureOptions,
-): RequestHandler {
+): Promise<void> {
   const v = new Verifier(options);
 
-  return wrap(async (req, res, next) => {
+  fastify.addHook<{
+    Headers: Headers;
+  }>('preValidation', async (request, reply) => {
     try {
-      req.senderKey = await v.verify(req);
+      request.senderKey = await v.verify(request);
     } catch (error) {
       debug('got verify error', error);
-      res.status(400)
+      reply.status(400)
         .send({ error: 'Invalid signature', details: error.message });
-      return;
+      return reply;
     }
 
-    next();
+    return undefined;
   });
 }

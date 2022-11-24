@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { type FastifyInstance } from 'fastify';
 
 import {
   HOST,
@@ -14,11 +14,9 @@ import {
   MAX_ATTACHMENTS,
 } from '../config.js';
 
-export default (): Router => {
-  const router = Router();
-
-  router.get('/instance', (req, res) => {
-    res.send({
+export default async (fastify: FastifyInstance): Promise<void> => {
+  fastify.get('/api/v1/instance', () => {
+    return {
       uri: HOST,
       title: SERVER_TITLE,
       short_description: SERVER_SHORT_DESCRIPTION,
@@ -67,13 +65,14 @@ export default (): Router => {
       rules: RULES.map((text, id) => {
         return { id: id.toString(), text };
       }),
-    });
+    };
   });
+
+  // TODO(indutny): use @fastify/formbody
 
   // TODO(indutny): Sign-in flow for Toot!
-  router.post('/apps', (req, res) => {
-    res.status(404).send({ error: 'oops' });
+  fastify.post('/api/v1/apps', (_request, reply) => {
+    reply.status(404);
+    return { error: 'oops' };
   });
-
-  return router;
 };
