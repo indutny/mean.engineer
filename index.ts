@@ -15,7 +15,7 @@ declare module 'fastify' {
   }
 }
 
-const fastify = Fastify();
+const fastify = Fastify({ logger: true });
 
 const db = new Database();
 const outbox = new Outbox({ db });
