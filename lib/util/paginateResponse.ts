@@ -18,6 +18,7 @@ export type PaginateReply = Readonly<{
   totalItems: number;
   partOf?: URL;
   first?: URL;
+  current?: URL;
   next?: URL;
   orderedItems?: ReadonlyArray<URL>;
 }>;
@@ -56,6 +57,7 @@ export async function paginateResponse(
     totalRows,
     rows,
     hasMore,
+    pages,
   } = await getData(dbPage);
 
   if (page === undefined) {
@@ -65,7 +67,10 @@ export async function paginateResponse(
       type: 'OrderedCollection',
       summary,
       totalItems: totalRows,
-      first: totalRows > 0 ? new URL('?page=1', url) : undefined,
+      first: pages > 0 ? new URL('?page=1', url) : undefined,
+      current: pages > 0 ?
+        new URL(`?page=${pages}`, url) :
+        undefined,
     };
   }
 
