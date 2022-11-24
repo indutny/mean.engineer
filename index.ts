@@ -15,7 +15,11 @@ declare module 'fastify' {
   }
 }
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({
+  logger: {
+    transport: { target: '@fastify/one-line-logger' },
+  },
+});
 
 const db = new Database();
 const outbox = new Outbox({ db });
@@ -36,6 +40,4 @@ fastify.register(routes);
 
 await outbox.runJobs();
 
-const addr = await fastify.listen({ port: 8000, host: '127.0.0.1' });
-
-console.log('Listening on', addr);
+await fastify.listen({ port: 8000, host: '127.0.0.1' });
