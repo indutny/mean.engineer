@@ -55,7 +55,9 @@ export default async (fastify: Instance): Promise<void> => {
 
   fastify.get('/users/:user', {
     schema: {
-      response: ActorSchema,
+      response: {
+        200: ActorSchema,
+      },
     }
   }, (request) => {
     const { targetUser } = request;
@@ -65,8 +67,8 @@ export default async (fastify: Instance): Promise<void> => {
 
     return {
       '@context': 'https://www.w3.org/ns/activitystreams',
-      id: url,
-      type: 'Person',
+      id: url.toString(),
+      type: 'Person' as const,
       following: `${url}/following`,
       followers: `${url}/followers`,
       inbox: `${url}/inbox`,
@@ -79,7 +81,7 @@ export default async (fastify: Instance): Promise<void> => {
 
       publicKey: {
         id: `${url}#main-key`,
-        owner: url,
+        owner: url.toString(),
         publicKeyPem: targetUser.publicKey,
       },
     };

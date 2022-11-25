@@ -242,13 +242,13 @@ export const ActorSchema = createObjectSchema(
       owner: T.String(),
       publicKeyPem: T.String(),
     }),
+    liked: T.String(),
   },
   {
     inbox: T.String(),
     outbox: T.String(),
     following: T.String(),
     followers: T.String(),
-    liked: T.String(),
   },
 );
 
