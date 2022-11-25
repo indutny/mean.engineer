@@ -3,7 +3,7 @@ import createDebug from 'debug';
 
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
-import type { Activity, Follow, Undo } from './schemas/activityPub.js';
+import type { Activity, Follow, Undo, Create } from './schemas/activityPub.js';
 import { getLinkHref } from './schemas/activityPub.js';
 import type { Outbox } from './outbox.js';
 import { isSameHost } from './util/isSameHost.js';
@@ -35,6 +35,8 @@ export class Inbox {
       return this.handleFollowRequest(user, activity);
     } else if (type === 'Undo') {
       return this.handleUndo(user, activity);
+    } else if (type === 'Create') {
+      return this.handleCreate(user, activity);
     }
 
     throw new Error(`Unsupported inbox activity: ${type}`);
@@ -69,6 +71,12 @@ export class Inbox {
 
   private async handleUndo(user: User, undo: Undo): Promise<void> {
     const { object } = undo;
+    const actor = new URL(getLinkHref(undo.actor));
+
+    assert(
+      object.id && isSameHost(new URL(object.id), actor),
+      `Cross-origin undo object=${object.id} actor=${actor}`
+    );
 
     const { type } = object;
     if (type === 'Follow') {
@@ -84,13 +92,26 @@ export class Inbox {
     follow: Follow,
   ): Promise<void> {
     const actor = new URL(getLinkHref(undo.actor));
-    assert(
-      !follow.id || isSameHost(new URL(follow.id), actor),
-      `Cross-origin unfollow follow=${follow.id} actor=${actor}`
-    );
     await this.db.unfollow({
       actor,
       owner: user.getURL(),
     });
+  }
+
+  private async handleCreate(
+    user: User,
+    create: Create,
+  ): Promise<void> {
+    const { object } = create;
+    const actor = new URL(getLinkHref(create.actor));
+
+    const owner = user.getURL();
+
+    assert(
+      object.id && isSameHost(new URL(object.id), actor),
+      `Cross-origin create object=${object.id} actor=${actor}`
+    );
+
+    debug('got create object %O', create.object);
   }
 }

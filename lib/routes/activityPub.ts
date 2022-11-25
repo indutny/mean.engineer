@@ -177,9 +177,9 @@ export default async (fastify: Instance): Promise<void> => {
     }
 
     // Can't squat others ids!
-    if (id && !isSameHost(new URL(id), new URL(actor))) {
+    if (!id || !isSameHost(new URL(id), new URL(actor))) {
       debug('invalid activity origin body=%O', request.body);
-      return reply.badRequest('Invalid activity origin');
+      return reply.forbidden('Invalid activity origin');
     }
 
     try {
