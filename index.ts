@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import FastifySensible from '@fastify/sensible';
+import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 
 import { Database } from './lib/db.js';
 import { Inbox } from './lib/inbox.js';
@@ -20,7 +21,7 @@ const fastify = Fastify({
   logger: {
     transport: { target: '@fastify/one-line-logger' },
   },
-});
+}).withTypeProvider<TypeBoxTypeProvider>();
 
 const db = new Database();
 const outbox = new Outbox({ db });

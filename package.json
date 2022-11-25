@@ -19,6 +19,8 @@
     "@fastify/formbody": "^7.3.0",
     "@fastify/one-line-logger": "^1.0.0",
     "@fastify/sensible": "^5.1.1",
+    "@fastify/type-provider-typebox": "^2.4.0",
+    "@sinclair/typebox": "^0.25.9",
     "better-sqlite3": "github:indutny/better-sqlcipher#cab28cdcbefc4d240dcd123a0aed089fb0a7d155",
     "debug": "^4.3.4",
     "fastify": "^4.10.2",

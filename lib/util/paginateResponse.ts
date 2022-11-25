@@ -1,6 +1,12 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import type { Paginated } from '../db.js';
+import type {
+  OrderedCollection,
+  OrderedCollectionPage,
+} from '../schemas/activityPub.js';
+
+export type PaginateReply = OrderedCollection | OrderedCollectionPage;
 
 export type PaginateOptions = Readonly<{
   url: URL;
@@ -8,25 +14,11 @@ export type PaginateOptions = Readonly<{
   getData(page?: number): Promise<Paginated<URL>>;
 }>;
 
-export type PaginateReply = Readonly<{
-  error: string;
-} | {
-  '@context': 'https://www.w3.org/ns/activitystreams';
-  id: URL;
-  type: 'OrderedCollection' | 'OrderedCollectionPage';
-  summary?: string;
-  totalItems: number;
-  partOf?: URL;
-  first?: URL;
-  next?: URL;
-  orderedItems?: ReadonlyArray<URL>;
-}>;
-
 export async function paginateResponse(
   request: FastifyRequest<{ Querystring: { page?: string } }>,
   reply: FastifyReply,
   { url, summary, getData } : PaginateOptions,
-): Promise<PaginateReply> {
+): Promise<PaginateReply | void> {
   const { page: pageString } = request.query;
 
   let page: number | undefined;
@@ -36,13 +28,11 @@ export async function paginateResponse(
   if (pageString && typeof pageString === 'string') {
     page = parseInt(pageString, 10);
     if (page.toString() !== pageString) {
-      reply.badRequest();
-      return { error: 'Invalid page' };
+      return reply.badRequest('Invalid page');
     }
 
     if (page < 1) {
-      reply.badRequest();
-      return { error: 'Invalid page' };
+      return reply.badRequest('Invalid page');
     }
 
     // To be returned to requestor
@@ -61,7 +51,7 @@ export async function paginateResponse(
   if (page === undefined) {
     return {
       '@context': 'https://www.w3.org/ns/activitystreams',
-      id: url,
+      id: url.toString(),
       type: 'OrderedCollection',
       summary,
       totalItems: totalRows,
@@ -71,11 +61,11 @@ export async function paginateResponse(
 
   return {
     '@context': 'https://www.w3.org/ns/activitystreams',
-    id: new URL(`?page=${page}`, url),
+    id: new URL(`?page=${page}`, url).toString(),
     type: 'OrderedCollectionPage',
     totalItems: totalRows,
-    partOf: url,
-    next: hasMore ? new URL(`?page=${nextPage}`, url) : undefined,
-    orderedItems: rows,
+    partOf: url.toString(),
+    next: hasMore ? new URL(`?page=${nextPage}`, url).toString() : undefined,
+    orderedItems: rows?.map(row => row.toString()),
   };
 }

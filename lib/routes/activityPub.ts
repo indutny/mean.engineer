@@ -87,6 +87,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     return reply.internalServerError('not implemented');
   });
 
+  // TODO(indutny): assign id to the object.
   fastify.post<{
     // TODO(indutny): schema
     Body: Activity;
