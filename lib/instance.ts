@@ -27,6 +27,10 @@ export default async function create() {
     },
   }).withTypeProvider<TypeBoxTypeProvider>();
 
+  fastify.register(FastifySensible);
+  fastify.register(jsonld);
+  fastify.register(routes);
+
   const db = new Database();
   const outbox = new Outbox({ fastify, db });
   const inbox = new Inbox({ db, outbox });
@@ -42,10 +46,6 @@ export default async function create() {
     .decorate('outbox', outbox)
     .decorate('inbox', inbox)
     .decorate('profileFetcher', profileFetcher);
-
-  fastify.register(FastifySensible);
-  fastify.register(jsonld);
-  fastify.register(routes);
 
   await outbox.runJobs();
 
