@@ -63,7 +63,7 @@ export class ProfileFetcher {
 
     debug('fetching profile %j', url);
 
-    const profileFetch = this.limit(() => this.fetchProfile(url));
+    const profileFetch = this.fetchProfile(url);
 
     let profile: Actor;
     try {
