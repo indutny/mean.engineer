@@ -1,4 +1,5 @@
 import {
+  randomUUID,
   randomBytes,
   pbkdf2,
   generateKeyPairSync,
@@ -96,6 +97,21 @@ export class User implements UserAttributes {
 
   public getInboxURL(): URL {
     return new URL(`./users/${this.username}/inbox`, BASE_URL);
+  }
+
+  public createTemporaryId(): URL {
+    return new URL(`./${randomUUID()}`, BASE_URL);
+  }
+
+  public createActivityId(): URL {
+    return new URL(`./users/${this.username}/${randomUUID()}`, BASE_URL);
+  }
+
+  public createObjectId(): URL {
+    return new URL(
+      `./users/${this.username}/objects/${randomUUID()}`,
+      BASE_URL,
+    );
   }
 
   public toColumns(): UserColumns {

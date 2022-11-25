@@ -10,7 +10,11 @@ import {
 } from '../util/paginateResponse.js';
 import { isSameHost } from '../util/isSameHost.js';
 import type { User } from '../models/user.js';
-import { ActorSchema, ActivityValidator } from '../schemas/activityPub.js';
+import {
+  ActorSchema,
+  ActivityValidator,
+  UnknownObjectValidator,
+} from '../schemas/activityPub.js';
 import type { Instance } from '../instance.js';
 
 const debug = createDebug('me:routes:users');
@@ -104,14 +108,16 @@ export default async (fastify: Instance): Promise<void> => {
       return reply.forbidden('invalid authorization');
     }
 
-    if (!ActivityValidator.Check(request.body)) {
+    let result: URL;
+    if (ActivityValidator.Check(request.body)) {
+      result = await fastify.outbox.sendActivity(user, request.body);
+    } else if (UnknownObjectValidator.Check(request.body)) {
+      result = await fastify.outbox.sendObject(user, request.body);
+    } else {
       debug('unsupported outbox activity origin body=%O', request.body);
-      return reply.notImplemented('Activity not supported');
+      result = user.createTemporaryId();
     }
-
-    await fastify.outbox.sendActivity(user, request.body);
-
-    return reply.status(201).send();
+    return reply.redirect(201, result.toString());
   });
 
   // TODO(indutny): use schema

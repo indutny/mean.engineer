@@ -12,7 +12,7 @@ import {
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import { OutboxJob } from './models/outboxJob.js';
-import type { Activity, Follow } from './schemas/activityPub.js';
+import type { Activity, Follow, UnknownObject } from './schemas/activityPub.js';
 import { getLinkHref } from './schemas/activityPub.js';
 import { incrementalBackoff } from './util/incrementalBackoff.js';
 import { ACTIVITY_JSON_MIME } from './constants.js';
@@ -83,7 +83,7 @@ export class Outbox {
     await this.queueJob(user, inbox, data);
   }
 
-  public async sendActivity(user: User, activity: Activity): Promise<void> {
+  public async sendActivity(user: User, activity: Activity): Promise<URL> {
     const {
       bto,
       bcc,
@@ -95,17 +95,29 @@ export class Outbox {
       cc,
     } = data;
 
+    const id = user.createActivityId();
+
+    const activityWithId = {
+      ...data,
+      id: id.toString(),
+    };
+
     debug(
-      'sending activity %O to=%j cc=%j bto=%j bcc=%j', data, to, cc, bcc, bto,
+      'sending activity %O to=%j cc=%j bto=%j bcc=%j',
+      activityWithId, to, cc, bcc, bto,
     );
 
-    const targets = [bto, bcc, to, cc].flat()
+    let targets = [bto, bcc, to, cc].flat();
+    const isPublic = targets.includes('as:Public');
+
+    const targetURLs = targets
+      .filter(x => x !== 'as:Public')
       .filter((x: string | undefined): x is string => x !== undefined)
       .map(x => new URL(x));
 
     const inboxes = await pMap(
-      targets,
-      target => this.getInboxes(target, { resolve: true }),
+      targetURLs,
+      url => this.getInboxes(url, { resolve: true }),
       {
         concurrency: MAX_INBOX_FETCH_CONCURRENCY,
         stopOnError: true,
@@ -115,12 +127,48 @@ export class Outbox {
     // Deduplicate
     const uniqueInboxes = [...new Set(inboxes.flat())];
     debug(
-      'got unique inboxes for %O, %j', data, uniqueInboxes
+      'got unique inboxes for %O, %j', activityWithId, uniqueInboxes
     );
 
     await Promise.all(uniqueInboxes.map(
-      inbox => this.queueJob(user, inbox, data),
+      inbox => this.queueJob(user, inbox, activityWithId),
     ));
+
+    await this.handleActivity(user, activity);
+
+    return id;
+  }
+
+  public async sendObject(user: User, object: UnknownObject): Promise<URL> {
+    const {
+      to,
+      cc,
+      bto,
+      bcc,
+      audience,
+      published,
+    } = object;
+
+    debug(
+      'sending object %O to=%j cc=%j bto=%j bcc=%j', object, to, cc, bcc, bto,
+    );
+
+    return await this.sendActivity(user, {
+      '@context': 'https://www.w3.org/ns/activitystreams',
+      type: 'Create',
+      actor: user.getURL().toString(),
+      object: {
+        ...object,
+        id: user.createObjectId().toString(),
+      },
+
+      to,
+      cc,
+      bto,
+      bcc,
+      audience,
+      published,
+    });
   }
 
   //
@@ -331,5 +379,13 @@ export class Outbox {
     }
 
     throw new Error(`Failed to parse local url ${target}`);
+  }
+
+  public async handleActivity(
+    user: User,
+    activity: Activity,
+  ): Promise<void> {
+    // TODO(indutny): implement me.
+    debug('handleActivity %O', activity);
   }
 }

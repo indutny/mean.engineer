@@ -123,6 +123,7 @@ const ObjectProps = {
   bto: LDString,
   cc: LDString,
   bcc: LDString,
+  audience: LDString,
 };
 
 function createObjectSchema<
@@ -143,6 +144,8 @@ export const UnknownObjectSchema = createObjectSchema(T.Optional(T.String()), {
 }, {});
 
 export type UnknownObject = Static<typeof UnknownObjectSchema>;
+
+export const UnknownObjectValidator = TypeCompiler.Compile(UnknownObjectSchema);
 
 export const LinkSchema = T.Union([
   T.String(),
@@ -274,6 +277,17 @@ const CommonActivityProps = {
   instrument:  ObjectOrLink(UnknownObjectSchema),
 };
 
+export const CreateSchema = createObjectSchema(
+  T.Literal('Create'),
+  CommonActivityProps,
+  {
+    actor: LinkSchema,
+    object: UnknownObjectSchema,
+  },
+);
+
+export type Create = Static<typeof CreateSchema>;
+
 export const FollowSchema = createObjectSchema(
   T.Literal('Follow'),
   CommonActivityProps,
@@ -298,6 +312,7 @@ export type Undo = Static<typeof UndoSchema>;
 
 // Only supported activities go here.
 export const ActivitySchema = T.Union([
+  CreateSchema,
   FollowSchema,
   UndoSchema,
 ]);
