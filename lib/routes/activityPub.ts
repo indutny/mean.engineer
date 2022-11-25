@@ -178,6 +178,7 @@ export default async (fastify: Instance): Promise<void> => {
 
     try {
       await fastify.inbox.handleActivity(targetUser, request.body);
+      debug('successfully handled activity %j', request.body);
       return reply.status(202);
     } catch (error) {
       debug('failed to handle activity %j %O', request.body, error);
