@@ -111,7 +111,7 @@ export default async (fastify: Instance): Promise<void> => {
 
     await fastify.outbox.sendActivity(user, request.body);
 
-    return reply.status(201);
+    return reply.status(201).send();
   });
 
   // TODO(indutny): use schema
@@ -179,7 +179,7 @@ export default async (fastify: Instance): Promise<void> => {
     try {
       await fastify.inbox.handleActivity(targetUser, request.body);
       debug('successfully handled activity %j', request.body);
-      return reply.status(202);
+      return reply.status(202).send();
     } catch (error) {
       debug('failed to handle activity %j %O', request.body, error);
       return reply.internalServerError(error.stack);
