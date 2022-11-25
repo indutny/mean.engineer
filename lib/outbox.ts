@@ -248,13 +248,15 @@ export class Outbox {
       res.status,
       Array.from(res.headers.entries()),
     );
-    if (res.status < 200 || res.status >= 300) {
-      const reason = await res.text();
-      throw new Error(
-        `Failed to post to inbox: ${inbox}, status: ${res.status}, ` +
-          `reason: ${reason}`
-      );
+    if (res.ok) {
+      return;
     }
+
+    const reason = await res.text();
+    throw new Error(
+      `Failed to post to inbox: ${inbox}, status: ${res.status}, ` +
+      `reason: ${reason}`
+    );
   }
 
   private async getInboxes(
