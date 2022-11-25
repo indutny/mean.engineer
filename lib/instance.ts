@@ -26,8 +26,9 @@ export default async function create() {
         return request.ip;
       }
 
-      console.error(request.senderKey);
-      return request.senderKey.owner;
+      const url = new URL(request.senderKey.owner);
+      url.search = '';
+      return url.toString();
     }
   });
   fastify.register(jsonld);
