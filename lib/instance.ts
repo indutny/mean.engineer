@@ -23,7 +23,7 @@ export default async function create() {
     hook: 'preHandler',
     async keyGenerator(request) {
       if (!request.senderKey) {
-        return request.ip;
+        return request.headers['x-forwarded-for'] ?? request.ip;
       }
 
       const url = new URL(request.senderKey.owner);
