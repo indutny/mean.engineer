@@ -3,12 +3,15 @@ import type { FastifyRequest } from 'fastify';
 import assert from 'assert';
 import { createVerify } from 'crypto';
 import LRU from 'lru-cache';
+import createDebug from 'debug';
 
 import { compact } from '../util/jsonld.js';
 import { USER_AGENT } from '../config.js';
 import { HOUR } from '../constants.js';
 import { ActorValidator } from '../schemas/activityPub.js';
 import type { Instance } from '../instance.js';
+
+const debug = createDebug('me:verifySignatureHeader');
 
 const MAX_AGE = 12 * HOUR;
 const SKEW = HOUR;
@@ -121,6 +124,7 @@ export class Verifier {
 
     const json = await response.json();
     const actor = await compact(json);
+    debug('got remote actor %O', actor);
     assert(ActorValidator.Check(actor), 'Remote object is not a valid actor');
 
     const { publicKey } = actor;
