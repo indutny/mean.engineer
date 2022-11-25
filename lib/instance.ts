@@ -22,13 +22,18 @@ export default async function create() {
     timeWindow: MINUTE,
     hook: 'preHandler',
     async keyGenerator(request) {
-      if (!request.senderKey) {
-        return request.headers['x-forwarded-for'] ?? request.ip;
+      if (request.senderKey) {
+        const url = new URL(request.senderKey.owner);
+        url.search = '';
+        return url.toString();
       }
 
-      const url = new URL(request.senderKey.owner);
-      url.search = '';
-      return url.toString();
+      const forwardedFor = request.headers['x-forwarded-for'];
+      if (forwardedFor) {
+        return String(forwardedFor);
+      }
+
+      return request.ip;
     }
   });
   fastify.register(jsonld);

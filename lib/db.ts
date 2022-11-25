@@ -330,7 +330,7 @@ export class Database {
 
         CREATE INDEX likes_by_post ON likes (post, createdAt ASC);
 
-        CREATE TABLE posts (
+        CREATE TABLE objects (
           id STRING NON NULL,
           owner STRING NON NULL,
           content STRING NON NULL,
@@ -339,7 +339,7 @@ export class Database {
           PRIMARY KEY (owner, id)
         );
 
-        CREATE INDEX posts_by_owner ON posts (owner, createdAt ASC);
+        CREATE INDEX objects_by_owner ON objects (owner, createdAt DESC);
       `);
     },
   ];
