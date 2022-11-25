@@ -107,8 +107,7 @@ export class Outbox {
       activityWithId, to, cc, bcc, bto,
     );
 
-    let targets = [bto, bcc, to, cc].flat();
-    const isPublic = targets.includes('as:Public');
+    const targets = [bto, bcc, to, cc].flat();
 
     const targetURLs = targets
       .filter(x => x !== 'as:Public')
