@@ -95,6 +95,7 @@ export class ProfileFetcher {
       const body = await response.text();
       fastify.assert(
         response.ok,
+        404,
         `Error fetching profile ${url}: ` +
           `status=${response.status} body=${JSON.stringify(body)}`
       );
@@ -105,6 +106,7 @@ export class ProfileFetcher {
     debug('got remote actor %O', actor);
     fastify.assert(
       ActorValidator.Check(actor),
+      400,
       'Remote object is not a valid actor',
     );
 
