@@ -3,8 +3,8 @@ import createDebug from 'debug';
 
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
-import type { AnyActivity, Activity } from './schemas/activityPub.js';
-import { AnyActivityValidator, getLinkHref } from './schemas/activityPub.js';
+import type { Activity, Follow, Undo } from './schemas/activityPub.js';
+import { getLinkHref } from './schemas/activityPub.js';
 import type { Outbox } from './outbox.js';
 import { isSameHost } from './util/isSameHost.js';
 
@@ -26,7 +26,7 @@ export class Inbox {
 
   public async handleActivity(
     user: User,
-    activity: AnyActivity,
+    activity: Activity,
   ): Promise<void> {
     debug('handleActivity %O', activity);
 
@@ -42,15 +42,9 @@ export class Inbox {
 
   private async handleFollowRequest(
     user: User,
-    follow: Activity,
+    follow: Follow,
   ): Promise<void> {
-    const { object: objectString } = follow;
-    assert(
-      typeof objectString === 'string',
-      'follow.object is not a string',
-    );
-
-    const object = new URL(objectString);
+    const object = new URL(getLinkHref(follow.object));
     const owner = user.getURL();
     assert.strictEqual(
       object.toString(),
@@ -73,28 +67,23 @@ export class Inbox {
     }
   }
 
-  private async handleUndo(user: User, activity: Activity): Promise<void> {
-    const { object } = activity;
+  private async handleUndo(user: User, undo: Undo): Promise<void> {
+    const { object } = undo;
 
-    assert(typeof object !== 'string', 'Undo object must be present');
-    assert(
-      AnyActivityValidator.Check(object),
-      'Undo object must be an activity',
-    );
     const { type } = object;
     if (type === 'Follow') {
-      return this.handleUnfollow(user, activity, object);
+      return this.handleUnfollow(user, undo, object);
     }
 
-    throw new Error(`Unsupported inbox activity: ${type}`);
+    throw new Error(`Unsupported undo object: ${type}`);
   }
 
   private async handleUnfollow(
     user: User,
-    activity: Activity,
-    follow: Activity,
+    undo: Undo,
+    follow: Follow,
   ): Promise<void> {
-    const actor = new URL(getLinkHref(activity.actor));
+    const actor = new URL(getLinkHref(undo.actor));
     assert(
       !follow.id || isSameHost(new URL(follow.id), actor),
       `Cross-origin unfollow follow=${follow.id} actor=${actor}`

@@ -12,7 +12,7 @@ import {
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import { OutboxJob } from './models/outboxJob.js';
-import type { AnyActivity, Activity } from './schemas/activityPub.js';
+import type { Activity, Follow } from './schemas/activityPub.js';
 import { getLinkHref } from './schemas/activityPub.js';
 import { incrementalBackoff } from './util/incrementalBackoff.js';
 import { ACTIVITY_JSON_MIME } from './constants.js';
@@ -59,7 +59,7 @@ export class Outbox {
     }
   }
 
-  public async acceptFollow(user: User, follow: Activity): Promise<void> {
+  public async acceptFollow(user: User, follow: Follow): Promise<void> {
     const us = user.getURL();
     const data = {
       id: `${BASE_URL}/${randomUUID()}`,
@@ -83,7 +83,7 @@ export class Outbox {
     await this.queueJob(user, inbox, data);
   }
 
-  public async sendActivity(user: User, activity: AnyActivity): Promise<void> {
+  public async sendActivity(user: User, activity: Activity): Promise<void> {
     const {
       bto,
       bcc,

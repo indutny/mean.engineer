@@ -63,6 +63,11 @@ export const IntransitiveActivityTypeSchema = T.Union([
   T.Literal('Travel'),
 ]);
 
+export const SupportedActivitySchema = T.Union([
+  T.Literal('Follow'),
+  T.Literal('Undo'),
+]);
+
 export const ActorTypeSchema = T.Union([
   T.Literal('Application'),
   T.Literal('Group'),
@@ -142,7 +147,7 @@ export type UnknownObject = Static<typeof UnknownObjectSchema>;
 export const LinkSchema = T.Union([
   T.String(),
   createObjectSchema(
-    T.Literal('Link'),
+    T.Union([ T.Literal('Link'), T.Literal('Mention') ]),
     {
       rel: T.String(),
     },
@@ -162,28 +167,31 @@ export function getLinkHref(link: Link): string {
   return link.href;
 }
 
-// TODO(indutny): make this generic on object
-// Technically these can be objects, but we don't support that
-const ObjectOrLink = LinkSchema;
+const ObjectOrLink = <Value extends TSchema>(value: Value) => T.Union([
+  LinkSchema,
+  value,
+]);
 
 const CommonCollectionProps = {
   totalItems: T.Number(),
 
-  current: ObjectOrLink,
-  first: ObjectOrLink,
-  last: ObjectOrLink,
+  // Technically these can be objects, but we don't support that
+  current: LinkSchema,
+  first: LinkSchema,
+  last: LinkSchema,
 };
 
 const CollectionProps = {
   ...CommonCollectionProps,
 
-  items: T.Array(ObjectOrLink),
+  items: T.Array(ObjectOrLink(UnknownObjectSchema)),
 };
 
 const CollectionPageProps = {
-  partOf: ObjectOrLink,
-  prev: ObjectOrLink,
-  next: ObjectOrLink,
+  // Technically these can be objects, but we don't support that
+  partOf: LinkSchema,
+  prev: LinkSchema,
+  next: LinkSchema,
 };
 
 export const CollectionSchema = createObjectSchema(
@@ -208,7 +216,7 @@ export type CollectionPage = Static<typeof CollectionPageSchema>;
 const OrderedCollectionProps = {
   ...CommonCollectionProps,
 
-  orderedItems: T.Array(ObjectOrLink),
+  orderedItems: T.Array(ObjectOrLink(UnknownObjectSchema)),
 };
 
 export const OrderedCollectionSchema = createObjectSchema(
@@ -261,49 +269,39 @@ export const ActorValidator = TypeCompiler.Compile(ActorSchema);
 //
 
 const CommonActivityProps = {
-  result: ObjectOrLink,
-  origin: ObjectOrLink,
-  instrument: ObjectOrLink,
+  result: ObjectOrLink(UnknownObjectSchema),
+  origin:  ObjectOrLink(UnknownObjectSchema),
+  instrument:  ObjectOrLink(UnknownObjectSchema),
 };
 
-const RequiredActivityProps = {
-  object: ObjectOrLink,
-  actor: ObjectOrLink,
-};
-
-export const ActivitySchema = createObjectSchema(
-  ActivityTypeSchema,
+export const FollowSchema = createObjectSchema(
+  T.Literal('Follow'),
+  CommonActivityProps,
   {
-    ...CommonActivityProps,
-    target: ObjectOrLink,
+    actor: LinkSchema,
+    object: LinkSchema,
   },
-  RequiredActivityProps,
 );
+
+export type Follow = Static<typeof FollowSchema>;
+
+export const UndoSchema = createObjectSchema(
+  T.Literal('Undo'),
+  CommonActivityProps,
+  {
+    actor: LinkSchema,
+    object: FollowSchema,
+  },
+);
+
+export type Undo = Static<typeof UndoSchema>;
+
+// Only supported activities go here.
+export const ActivitySchema = T.Union([
+  FollowSchema,
+  UndoSchema,
+]);
 
 export type Activity = Static<typeof ActivitySchema>;
 
-const RequiredIntransitiveActivityProps = {
-  object: ObjectOrLink,
-  target: ObjectOrLink,
-};
-
-export const IntransitiveActivitySchema = createObjectSchema(
-  IntransitiveActivityTypeSchema,
-  {
-    ...CommonActivityProps,
-    actor: ObjectOrLink,
-  },
-  RequiredIntransitiveActivityProps,
-);
-
-export type IntransitiveActivity =
-  Static<typeof IntransitiveActivitySchema>;
-
-export const AnyActivitySchema = T.Union([
-  ActivitySchema,
-  IntransitiveActivitySchema,
-]);
-
-export type AnyActivity = Static<typeof AnyActivitySchema>;
-
-export const AnyActivityValidator = TypeCompiler.Compile(AnyActivitySchema);
+export const ActivityValidator = TypeCompiler.Compile(ActivitySchema);

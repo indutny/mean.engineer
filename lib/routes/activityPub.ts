@@ -10,7 +10,7 @@ import {
 } from '../util/paginateResponse.js';
 import { isSameHost } from '../util/isSameHost.js';
 import type { User } from '../models/user.js';
-import { ActorSchema, AnyActivitySchema } from '../schemas/activityPub.js';
+import { ActorSchema, ActivityValidator } from '../schemas/activityPub.js';
 import type { Instance } from '../instance.js';
 
 const debug = createDebug('me:routes:users');
@@ -92,9 +92,7 @@ export default async (fastify: Instance): Promise<void> => {
   });
 
   // TODO(indutny): assign id to the object.
-  fastify.post('/users/:user/outbox', {
-    schema: { body: AnyActivitySchema },
-  }, async (request, reply) => {
+  fastify.post('/users/:user/outbox', async (request, reply) => {
     const { user, targetUser } = request;
     fastify.assert(targetUser, 400, 'Missing target user');
 
@@ -104,6 +102,11 @@ export default async (fastify: Instance): Promise<void> => {
 
     if (!user.isSame(targetUser)) {
       return reply.forbidden('invalid authorization');
+    }
+
+    if (!ActivityValidator.Check(request.body)) {
+      debug('unsupported outbox activity origin body=%O', request.body);
+      return reply.notImplemented('Activity not supported');
     }
 
     await fastify.outbox.sendActivity(user, request.body);
@@ -149,15 +152,18 @@ export default async (fastify: Instance): Promise<void> => {
     reply.internalServerError('not implemented');
   });
 
-  fastify.post('/users/:user/inbox', {
-    schema: { body: AnyActivitySchema },
-  }, async (request, reply) => {
+  fastify.post('/users/:user/inbox', async (request, reply) => {
     if (!request.senderKey) {
       return reply.unauthorized('Signature header is required');
     }
 
     const { targetUser } = request;
     fastify.assert(targetUser, 400, 'Missing target user');
+
+    if (!ActivityValidator.Check(request.body)) {
+      debug('unsupported inbox activity origin body=%O', request.body);
+      return reply.notImplemented('Activity not supported');
+    }
 
     const { id, actor } = request.body;
     if (request.senderKey.owner !== actor) {
