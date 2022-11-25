@@ -1,4 +1,3 @@
-import { type FastifyInstance } from 'fastify';
 import acceptSerializer from '@fastify/accepts-serializer';
 import createDebug from 'debug';
 
@@ -11,7 +10,8 @@ import {
 } from '../util/paginateResponse.js';
 import { isSameHost } from '../util/isSameHost.js';
 import type { User } from '../models/user.js';
-import type { Activity } from '../types/as.js';
+import { ActorSchema, AnyActivitySchema } from '../schemas/activityPub.js';
+import type { Instance } from '../instance.js';
 
 const debug = createDebug('me:routes:users');
 
@@ -21,7 +21,7 @@ declare module 'fastify' {
   }
 }
 
-export default async (fastify: FastifyInstance): Promise<void> => {
+export default async (fastify: Instance): Promise<void> => {
   // TODO(indutny): html serializer?
   fastify.register(acceptSerializer, {
     serializers: [{
@@ -53,9 +53,11 @@ export default async (fastify: FastifyInstance): Promise<void> => {
   fastify.register(verifyBodyDigest);
   fastify.register(verifySignatureHeader);
 
-  // TODO(indutny): use @fastify/accepts-serializer
-
-  fastify.get('/users/:user', (request) => {
+  fastify.get('/users/:user', {
+    schema: {
+      response: ActorSchema,
+    }
+  }, (request) => {
     const { targetUser } = request;
     fastify.assert(targetUser, 400, 'Missing target user');
 
@@ -88,10 +90,9 @@ export default async (fastify: FastifyInstance): Promise<void> => {
   });
 
   // TODO(indutny): assign id to the object.
-  fastify.post<{
-    // TODO(indutny): schema
-    Body: Activity;
-  }>('/users/:user/outbox', async (request, reply) => {
+  fastify.post('/users/:user/outbox', {
+    schema: { body: AnyActivitySchema },
+  }, async (request, reply) => {
     const { user, targetUser } = request;
     fastify.assert(targetUser, 400, 'Missing target user');
 
@@ -108,6 +109,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     return reply.status(201);
   });
 
+  // TODO(indutny): use schema
   fastify.get<{
     Querystring: { page?: string };
     Reply: PaginateReply;
@@ -124,6 +126,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     });
   });
 
+  // TODO(indutny): use schema
   fastify.get<{
     Querystring: { page?: string };
     Reply: PaginateReply;
@@ -144,9 +147,9 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     reply.internalServerError('not implemented');
   });
 
-  fastify.post<{
-    Body: Activity;
-  }>('/users/:user/inbox', async (request, reply) => {
+  fastify.post('/users/:user/inbox', {
+    schema: { body: AnyActivitySchema },
+  }, async (request, reply) => {
     if (!request.senderKey) {
       return reply.unauthorized('Signature header is required');
     }
@@ -154,12 +157,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     const { targetUser } = request;
     fastify.assert(targetUser, 400, 'Missing target user');
 
-    type Body = Readonly<{
-      id: string;
-      actor: string;
-    }>;
-
-    const { id, actor } = request.body as Body;
+    const { id, actor } = request.body;
     if (request.senderKey.owner !== actor) {
       return reply.forbidden('Signature does not match actor');
     }

@@ -55,7 +55,7 @@ export async function paginateResponse(
       type: 'OrderedCollection',
       summary,
       totalItems: totalRows,
-      first: totalRows > 0 ? new URL('?page=1', url) : undefined,
+      first: totalRows > 0 ? new URL('?page=1', url).toString() : undefined,
     };
   }
 

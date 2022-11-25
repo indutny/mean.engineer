@@ -14,7 +14,8 @@ import {
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import { OutboxJob } from './models/outboxJob.js';
-import { ACTOR_TYPES, type Activity } from './types/as.js';
+import type { AnyActivity, Activity } from './schemas/activityPub.js';
+import { ActorValidator, getLinkHref } from './schemas/activityPub.js';
 import { incrementalBackoff } from './util/incrementalBackoff.js';
 import { compact } from './util/jsonld.js';
 import { HOUR } from './constants.js';
@@ -74,7 +75,7 @@ export class Outbox {
       object: follow,
     };
 
-    const target = new URL(follow.actor);
+    const target = new URL(getLinkHref(follow.actor));
 
     debug(`accepting follow ${us} <- ${target}`);
 
@@ -85,7 +86,7 @@ export class Outbox {
     await this.queueJob(user, inbox, data);
   }
 
-  public async sendActivity(user: User, activity: Activity): Promise<void> {
+  public async sendActivity(user: User, activity: AnyActivity): Promise<void> {
     const {
       bto,
       bcc,
@@ -284,14 +285,10 @@ export class Outbox {
       assert(200 <= res.status && res.status < 300, 'Invalid status code');
 
       const json = await res.json();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const ld = (await compact(json)) as any;
-      const { type } = ld;
+      const actor = await compact(json);
+      assert(ActorValidator.Check(actor), 'Response is not actor');
 
-      // TODO(indutny): resolve collections
-      assert(ACTOR_TYPES.has(type), `Invalid actor type ${type}`);
-
-      const inbox = ld.endpoints?.sharedInbox || ld.inbox;
+      const inbox = actor.endpoints?.sharedInbox || actor.inbox;
       assert.strictEqual(typeof inbox, 'string', 'Missing inbox field');
 
       const urls = [new URL(inbox)];

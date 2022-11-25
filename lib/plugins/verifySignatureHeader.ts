@@ -1,11 +1,14 @@
 import FastifyPlugin from 'fastify-plugin';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyRequest } from 'fastify';
+import assert from 'assert';
 import { createVerify } from 'crypto';
 import LRU from 'lru-cache';
 
 import { compact } from '../util/jsonld.js';
 import { USER_AGENT } from '../config.js';
 import { HOUR } from '../constants.js';
+import { ActorValidator } from '../schemas/activityPub.js';
+import type { Instance } from '../instance.js';
 
 const MAX_AGE = 12 * HOUR;
 const SKEW = HOUR;
@@ -37,7 +40,7 @@ interface Headers extends Record<string, string | undefined> {
 export class Verifier {
   private readonly cache: LRU<string, string>;
 
-  constructor(private readonly fastify: FastifyInstance, {
+  constructor(private readonly fastify: Instance, {
     cacheSize = 100,
     cacheTTL = HOUR,
   }: VerifySignatureOptions = {}) {
@@ -47,7 +50,7 @@ export class Verifier {
   public async verify(
     request: FastifyRequest<{ Headers: Headers }>,
   ): Promise<SenderKey | undefined> {
-    const fastify: FastifyInstance = this.fastify;
+    const fastify: Instance = this.fastify;
 
     const { signature: signatureString } = request.headers;
     if (signatureString === undefined) {
@@ -100,7 +103,7 @@ export class Verifier {
   }
 
   private async getPublicKey(owner: string, id: string): Promise<string> {
-    const fastify: FastifyInstance = this.fastify;
+    const fastify: Instance = this.fastify;
     const fullId = `${owner}#${id}`;
 
     const cached = this.cache.get(fullId);
@@ -117,11 +120,10 @@ export class Verifier {
     });
 
     const json = await response.json();
-    const ld = await compact(json);
+    const actor = await compact(json);
+    assert(ActorValidator.Check(actor), 'Remote object is not a valid actor');
 
-    type LD = Readonly<{ publicKey: string | ReadonlyArray<string> }>;
-
-    const { publicKey } = ld as LD;
+    const { publicKey } = actor;
     fastify.assert(publicKey, 404, 'Remote did not return public key');
 
     const publicKeys = Array.isArray(publicKey) ? publicKey : [publicKey];
@@ -145,7 +147,7 @@ export class Verifier {
 }
 
 async function verifySignatureHeader(
-  fastify: FastifyInstance,
+  fastify: Instance,
   options?: VerifySignatureOptions,
 ): Promise<void> {
   const v = new Verifier(fastify, options);

@@ -1,8 +1,8 @@
 import FastifyPlugin from 'fastify-plugin';
-import type { FastifyInstance } from 'fastify';
 
 import { type AuthToken } from '../models/authToken.js';
 import { User } from '../models/user.js';
+import type { Instance } from '../instance.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -10,7 +10,7 @@ declare module 'fastify' {
   }
 }
 
-async function auth(fastify: FastifyInstance): Promise<void> {
+async function auth(fastify: Instance): Promise<void> {
   fastify.addHook<{
     Headers: { authorization: 'string' };
   }>('onRequest', async (request, reply) => {

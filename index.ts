@@ -1,46 +1,5 @@
-import Fastify from 'fastify';
-import FastifySensible from '@fastify/sensible';
-import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
+import createInstance from './lib/instance.js';
 
-import { Database } from './lib/db.js';
-import { Inbox } from './lib/inbox.js';
-import { Outbox } from './lib/outbox.js';
-
-import routes from './lib/routes/index.js';
-import jsonld from './lib/plugins/jsonld.js';
-
-declare module 'fastify' {
-  interface FastifyInstance {
-    db: Database;
-    outbox: Outbox;
-    inbox: Inbox;
-  }
-}
-
-const fastify = Fastify({
-  logger: {
-    transport: { target: '@fastify/one-line-logger' },
-  },
-}).withTypeProvider<TypeBoxTypeProvider>();
-
-const db = new Database();
-const outbox = new Outbox({ db });
-const inbox = new Inbox({ db, outbox });
-
-process.on('SIGINT', () => {
-  db.close();
-  process.exit(0);
-});
-
-fastify
-  .decorate('db', db)
-  .decorate('outbox', outbox)
-  .decorate('inbox', inbox);
-
-fastify.register(FastifySensible);
-fastify.register(jsonld);
-fastify.register(routes);
-
-await outbox.runJobs();
+const fastify = await createInstance();
 
 await fastify.listen({ port: 8000, host: '127.0.0.1' });

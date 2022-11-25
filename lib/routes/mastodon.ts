@@ -1,6 +1,6 @@
-import { type FastifyInstance } from 'fastify';
 import formbody from '@fastify/formbody';
 
+import type { Instance } from '../instance.js';
 import {
   HOST,
   SERVER_TITLE,
@@ -15,7 +15,7 @@ import {
   MAX_ATTACHMENTS,
 } from '../config.js';
 
-export default async (fastify: FastifyInstance): Promise<void> => {
+export default async (fastify: Instance): Promise<void> => {
   fastify.register(formbody);
 
   fastify.get('/api/v1/instance', () => {

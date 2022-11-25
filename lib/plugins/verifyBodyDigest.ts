@@ -1,12 +1,13 @@
 import FastifyPlugin from 'fastify-plugin';
-import type { FastifyInstance } from 'fastify';
 import { createHash, timingSafeEqual } from 'crypto';
 import createDebug from 'debug';
+
+import type { Instance } from '../instance.js';
 
 const debug = createDebug('me:bodyVerifier');
 
 async function verifyBodyDigest(
-  fastify: FastifyInstance,
+  fastify: Instance,
 ): Promise<void> {
   fastify.addHook<{
     Headers: { digest?: string };

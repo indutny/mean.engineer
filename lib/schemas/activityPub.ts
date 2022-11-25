@@ -1,7 +1,10 @@
 import {
   Static,
   Type as T,
+  type TSchema,
+  type TProperties,
 } from '@sinclair/typebox';
+import { TypeCompiler } from '@sinclair/typebox/compiler';
 
 //
 // Utilities
@@ -16,23 +19,14 @@ const LDString = T.Union([
 // Enums
 //
 
-export const CoreTypeSchema = T.Union([
-  T.Literal('Object'),
-  T.Literal('Activity'),
-  T.Literal('IntransitiveActivity'),
-  T.Literal('Collection'),
-  T.Literal('OrderedCollection'),
-  T.Literal('CollectionPage'),
-  T.Literal('OrderedCollectionPage'),
-]);
-
-export type CoreType = Static<typeof CoreTypeSchema>;
-
 export const ActivityTypeSchema = T.Union([
+  // Core types
+  T.Literal('Activity'),
+
+  // Types
   T.Literal('Accept'),
   T.Literal('Add'),
   T.Literal('Announce'),
-  T.Literal('Arrive'),
   T.Literal('Block'),
   T.Literal('Create'),
   T.Literal('Delete'),
@@ -47,19 +41,27 @@ export const ActivityTypeSchema = T.Union([
   T.Literal('Listen'),
   T.Literal('Move'),
   T.Literal('Offer'),
-  T.Literal('Question'),
   T.Literal('Reject'),
   T.Literal('Read'),
   T.Literal('Remove'),
   T.Literal('TentativeReject'),
   T.Literal('TentativeAccept'),
-  T.Literal('Travel'),
   T.Literal('Undo'),
   T.Literal('Update'),
   T.Literal('View'),
 ]);
 
 export type ActivityType = Static<typeof ActivityTypeSchema>;
+
+export const IntransitiveActivityTypeSchema = T.Union([
+  // Core types
+  T.Literal('IntransitiveActivity'),
+
+  // Types
+  T.Literal('Arrive'),
+  T.Literal('Question'),
+  T.Literal('Travel'),
+]);
 
 export const ActorTypeSchema = T.Union([
   T.Literal('Application'),
@@ -72,6 +74,14 @@ export const ActorTypeSchema = T.Union([
 export type ActorType = Static<typeof ActorTypeSchema>;
 
 export const ObjectTypeSchema = T.Union([
+  // Core types
+  T.Literal('Object'),
+  T.Literal('Collection'),
+  T.Literal('OrderedCollection'),
+  T.Literal('CollectionPage'),
+  T.Literal('OrderedCollectionPage'),
+
+  // Types
   T.Literal('Article'),
   T.Literal('Audio'),
   T.Literal('Document'),
@@ -110,36 +120,58 @@ const ObjectProps = {
   bcc: LDString,
 };
 
-export const UnknownObjectSchema = T.Partial(T.Object({
-  ...ObjectProps,
-  type: T.String(),
-}));
+function createObjectSchema<
+  Type extends TSchema,
+  Props extends TProperties,
+  RequiredProps extends TProperties,
+>(type: Type, props: Props, requiredProps: RequiredProps) {
+  return T.Intersect([
+    T.Object({ type, ...requiredProps }),
+    T.Partial(T.Object({
+      ...ObjectProps,
+      ...props,
+    })),
+  ]);
+}
+
+export const UnknownObjectSchema = createObjectSchema(T.Optional(T.String()), {
+}, {});
 
 export type UnknownObject = Static<typeof UnknownObjectSchema>;
 
 export const LinkSchema = T.Union([
   T.String(),
-  T.Partial(T.Object({
-    ...ObjectProps,
-    href: T.String(),
-    rel: T.String(),
-  })),
+  createObjectSchema(
+    T.Literal('Link'),
+    {
+      rel: T.String(),
+    },
+    {
+      href: T.String(),
+    },
+  )
 ]);
 
 export type Link = Static<typeof LinkSchema>;
 
-const ObjectOrLink = T.Union([
-  UnknownObjectSchema,
-  LinkSchema,
-]);
+export function getLinkHref(link: Link): string {
+  if (typeof link === 'string') {
+    return link;
+  }
+
+  return link.href;
+}
+
+// TODO(indutny): make this generic on object
+// Technically these can be objects, but we don't support that
+const ObjectOrLink = LinkSchema;
 
 const CommonCollectionProps = {
   totalItems: T.Number(),
 
-  // Technically these three can be pages, but we don't support that
-  current: LinkSchema,
-  first: LinkSchema,
-  last: LinkSchema,
+  current: ObjectOrLink,
+  first: ObjectOrLink,
+  last: ObjectOrLink,
 };
 
 const CollectionProps = {
@@ -149,34 +181,27 @@ const CollectionProps = {
 };
 
 const CollectionPageProps = {
-  // Technically these three can be pages, but we don't support that
-  partOf: LinkSchema,
-  prev: LinkSchema,
-  next: LinkSchema,
+  partOf: ObjectOrLink,
+  prev: ObjectOrLink,
+  next: ObjectOrLink,
 };
 
-export const CollectionSchema = T.Intersect([
-  T.Object({
-    type: T.Literal('Collection'),
-  }),
-  T.Partial(T.Object({
-    ...ObjectProps,
-    ...CollectionProps,
-  })),
-]);
+export const CollectionSchema = createObjectSchema(
+  T.Literal('Collection'),
+  CollectionProps,
+  {},
+);
 
 export type Collection = Static<typeof CollectionSchema>;
 
-export const CollectionPageSchema = T.Intersect([
-  T.Object({
-    type: T.Literal('CollectionPage'),
-  }),
-  T.Partial(T.Object({
-    ...ObjectProps,
+export const CollectionPageSchema = createObjectSchema(
+  T.Literal('CollectionPage'),
+  {
     ...CollectionProps,
     ...CollectionPageProps,
-  })),
-]);
+  },
+  {},
+);
 
 export type CollectionPage = Static<typeof CollectionPageSchema>;
 
@@ -186,27 +211,99 @@ const OrderedCollectionProps = {
   orderedItems: T.Array(ObjectOrLink),
 };
 
-export const OrderedCollectionSchema = T.Intersect([
-  T.Object({
-    type: T.Literal('OrderedCollection'),
-  }),
-  T.Partial(T.Object({
-    ...ObjectProps,
-    ...OrderedCollectionProps,
-  })),
-]);
+export const OrderedCollectionSchema = createObjectSchema(
+  T.Literal('OrderedCollection'),
+  OrderedCollectionProps,
+  {},
+);
 
 export type OrderedCollection = Static<typeof OrderedCollectionSchema>;
 
-export const OrderedCollectionPageSchema = T.Intersect([
-  T.Object({
-    type: T.Literal('OrderedCollectionPage'),
-  }),
-  T.Partial(T.Object({
-    ...ObjectProps,
+export const OrderedCollectionPageSchema = createObjectSchema(
+  T.Literal('OrderedCollectionPage'),
+  {
     ...OrderedCollectionProps,
     ...CollectionPageProps,
-  })),
-]);
+  },
+  {}
+);
 
 export type OrderedCollectionPage = Static<typeof OrderedCollectionPageSchema>;
+
+export const ActorSchema = createObjectSchema(
+  ActorTypeSchema,
+  {
+    preferredUsername: T.String(),
+    endpoints: T.Partial(T.Object({
+      sharedInbox: T.String(),
+    })),
+    publicKey: T.Object({
+      id: T.String(),
+      owner: T.String(),
+      publicKeyPem: T.String(),
+    }),
+  },
+  {
+    inbox: T.String(),
+    outbox: T.String(),
+    following: T.String(),
+    followers: T.String(),
+    liked: T.String(),
+  },
+);
+
+export type Actor = Static<typeof ActorSchema>;
+
+export const ActorValidator = TypeCompiler.Compile(ActorSchema);
+
+//
+// Activities
+//
+
+const CommonActivityProps = {
+  result: ObjectOrLink,
+  origin: ObjectOrLink,
+  instrument: ObjectOrLink,
+};
+
+const RequiredActivityProps = {
+  object: UnknownObjectSchema,
+  actor: ObjectOrLink,
+};
+
+export const ActivitySchema = createObjectSchema(
+  ActivityTypeSchema,
+  {
+    ...CommonActivityProps,
+    target: ObjectOrLink,
+  },
+  RequiredActivityProps,
+);
+
+export type Activity = Static<typeof ActivitySchema>;
+
+const RequiredIntransitiveActivityProps = {
+  object: UnknownObjectSchema,
+  target: ObjectOrLink,
+};
+
+export const IntransitiveActivitySchema = createObjectSchema(
+  IntransitiveActivityTypeSchema,
+  {
+    ...CommonActivityProps,
+    actor: ObjectOrLink,
+  },
+  RequiredIntransitiveActivityProps,
+);
+
+export type IntransitiveActivity =
+  Static<typeof IntransitiveActivitySchema>;
+
+export const AnyActivitySchema = T.Union([
+  ActivitySchema,
+  IntransitiveActivitySchema,
+]);
+
+export type AnyActivity = Static<typeof AnyActivitySchema>;
+
+export const AnyActivityValidator = TypeCompiler.Compile(AnyActivitySchema);

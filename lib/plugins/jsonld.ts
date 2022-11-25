@@ -1,7 +1,8 @@
 import FastifyPlugin from 'fastify-plugin';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyRequest } from 'fastify';
 import sjson from 'secure-json-parse';
 
+import type { Instance } from '../instance.js';
 import { compact } from '../util/jsonld.js';
 
 declare module 'fastify' {
@@ -10,7 +11,7 @@ declare module 'fastify' {
   }
 }
 
-async function jsonld(fastify: FastifyInstance): Promise<void> {
+async function jsonld(fastify: Instance): Promise<void> {
   fastify.addContentTypeParser([
     'application/ld+json',
     'application/activity+json',

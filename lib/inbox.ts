@@ -3,7 +3,8 @@ import createDebug from 'debug';
 
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
-import type { Activity } from './types/as';
+import type { AnyActivity, Activity } from './schemas/activityPub.js';
+import { AnyActivityValidator, getLinkHref } from './schemas/activityPub.js';
 import type { Outbox } from './outbox.js';
 import { isSameHost } from './util/isSameHost.js';
 
@@ -23,7 +24,10 @@ export class Inbox {
     this.db = db;
   }
 
-  public async handleActivity(user: User, activity: Activity): Promise<void> {
+  public async handleActivity(
+    user: User,
+    activity: AnyActivity,
+  ): Promise<void> {
     debug('handleActivity %O', activity);
 
     const { type } = activity;
@@ -54,7 +58,7 @@ export class Inbox {
       'Invalid "object" field of Follow request'
     );
 
-    const actor = new URL(follow.actor);
+    const actor = new URL(getLinkHref(follow.actor));
 
     await this.db.follow({
       owner,
@@ -71,19 +75,25 @@ export class Inbox {
 
   private async handleUndo(user: User, activity: Activity): Promise<void> {
     const { object } = activity;
-    assert(object != null, 'Missing undo object');
 
-    const { type } = object as Activity;
+    assert(
+      AnyActivityValidator.Check(object),
+      'Undo object must be an activity',
+    );
+    const { type } = object;
     if (type === 'Follow') {
-      return this.handleUnfollow(user, activity);
+      return this.handleUnfollow(user, activity, object);
     }
 
     throw new Error(`Unsupported inbox activity: ${type}`);
   }
 
-  private async handleUnfollow(user: User, activity: Activity): Promise<void> {
-    const follow = activity.object as Activity;
-    const actor = new URL(activity.actor);
+  private async handleUnfollow(
+    user: User,
+    activity: Activity,
+    follow: Activity,
+  ): Promise<void> {
+    const actor = new URL(getLinkHref(activity.actor));
     assert(
       !follow.id || isSameHost(new URL(follow.id), actor),
       `Cross-origin unfollow follow=${follow.id} actor=${actor}`
