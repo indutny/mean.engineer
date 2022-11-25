@@ -267,7 +267,7 @@ const CommonActivityProps = {
 };
 
 const RequiredActivityProps = {
-  object: UnknownObjectSchema,
+  object: ObjectOrLink,
   actor: ObjectOrLink,
 };
 
@@ -283,7 +283,7 @@ export const ActivitySchema = createObjectSchema(
 export type Activity = Static<typeof ActivitySchema>;
 
 const RequiredIntransitiveActivityProps = {
-  object: UnknownObjectSchema,
+  object: ObjectOrLink,
   target: ObjectOrLink,
 };
 

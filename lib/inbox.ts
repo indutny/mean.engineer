@@ -76,6 +76,7 @@ export class Inbox {
   private async handleUndo(user: User, activity: Activity): Promise<void> {
     const { object } = activity;
 
+    assert(typeof object !== 'string', 'Undo object must be present');
     assert(
       AnyActivityValidator.Check(object),
       'Undo object must be an activity',
