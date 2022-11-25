@@ -18,6 +18,7 @@
     "@fastify/cors": "^8.2.0",
     "@fastify/formbody": "^7.3.0",
     "@fastify/one-line-logger": "^1.0.0",
+    "@fastify/rate-limit": "^7.5.0",
     "@fastify/sensible": "^5.1.1",
     "@fastify/type-provider-typebox": "^2.4.0",
     "@sinclair/typebox": "^0.25.9",

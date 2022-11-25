@@ -288,6 +288,10 @@ export const CreateSchema = createObjectSchema(
 
 export type Create = Static<typeof CreateSchema>;
 
+// Clients submitting the following activities to an outbox MUST provide the
+// object property in the activity: Create, Update, Delete, Follow, Add, Remove,
+// Like, Block, Undo.
+
 export const FollowSchema = createObjectSchema(
   T.Literal('Follow'),
   CommonActivityProps,

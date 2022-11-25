@@ -112,6 +112,6 @@ export class Inbox {
       `Cross-origin create object=${object.id} actor=${actor}`
     );
 
-    debug('got create object %O', create.object);
+    // TODO(indutny): put the object into inbox
   }
 }

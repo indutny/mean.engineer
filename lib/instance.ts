@@ -1,9 +1,11 @@
 import Fastify from 'fastify';
 import FastifySensible from '@fastify/sensible';
+import FastifyRateLimit from '@fastify/rate-limit';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 
 import routes from './routes/index.js';
 import jsonld from './plugins/jsonld.js';
+import { MINUTE } from './constants.js';
 
 export type Instance = Awaited<ReturnType<typeof create>>;
 
@@ -15,6 +17,19 @@ export default async function create() {
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   fastify.register(FastifySensible);
+  fastify.register(FastifyRateLimit, {
+    max: 120,
+    timeWindow: MINUTE,
+    hook: 'preHandler',
+    async keyGenerator(request) {
+      if (!request.senderKey) {
+        return request.ip;
+      }
+
+      console.error(request.senderKey);
+      return request.senderKey.owner;
+    }
+  });
   fastify.register(jsonld);
   fastify.register(routes);
 
