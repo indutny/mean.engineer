@@ -42,9 +42,11 @@ export class ProfileFetcher {
 
     const cached = this.cache.get(cacheKey);
     if (cached !== undefined) {
+      debug('cache hit %j', url);
       try {
         const cachedActor = await cached;
 
+        debug('running action for cached profile %j', url);
         return await action(cachedActor);
       } catch (error) {
         debug(
@@ -59,14 +61,23 @@ export class ProfileFetcher {
       }
     }
 
+    debug('fetching profile %j', url);
+
     const profileFetch = this.limit(() => this.fetchProfile(url));
 
-    this.cache.set(cacheKey, profileFetch);
+    let profile: Actor;
+    try {
+      this.cache.set(cacheKey, profileFetch);
+      profile = await profileFetch;
+    } catch (error) {
+      debug('failed to fetch profile %j error %O', url, error);
+      this.cache.delete(cacheKey);
+      throw error;
+    }
 
-    const actor = await profileFetch;
-    this.cache.set(cacheKey, actor);
-
-    return action(actor);
+    debug('running action on profile %j', url);
+    this.cache.set(cacheKey, profile);
+    return action(profile);
   }
 
   private async fetchProfile(url: URL): Promise<Actor> {
