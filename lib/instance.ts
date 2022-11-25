@@ -5,6 +5,7 @@ import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { Database } from './db.js';
 import { Inbox } from './inbox.js';
 import { Outbox } from './outbox.js';
+import { ProfileFetcher } from './profileFetcher.js';
 import routes from './routes/index.js';
 import jsonld from './plugins/jsonld.js';
 
@@ -13,6 +14,7 @@ declare module 'fastify' {
     db: Database;
     outbox: Outbox;
     inbox: Inbox;
+    profileFetcher: ProfileFetcher;
   }
 }
 
@@ -26,8 +28,9 @@ export default async function create() {
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   const db = new Database();
-  const outbox = new Outbox({ db });
+  const outbox = new Outbox({ fastify, db });
   const inbox = new Inbox({ db, outbox });
+  const profileFetcher = new ProfileFetcher(fastify);
 
   process.on('SIGINT', () => {
     db.close();
@@ -37,7 +40,8 @@ export default async function create() {
   fastify
     .decorate('db', db)
     .decorate('outbox', outbox)
-    .decorate('inbox', inbox);
+    .decorate('inbox', inbox)
+    .decorate('profileFetcher', profileFetcher);
 
   fastify.register(FastifySensible);
   fastify.register(jsonld);

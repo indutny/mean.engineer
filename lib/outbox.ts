@@ -1,5 +1,3 @@
-import assert from 'assert';
-import LRU from 'lru-cache';
 import { createHash, createSign, randomUUID } from 'crypto';
 import createDebug from 'debug';
 import { setTimeout as sleep } from 'timers/promises';
@@ -15,19 +13,18 @@ import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import { OutboxJob } from './models/outboxJob.js';
 import type { AnyActivity, Activity } from './schemas/activityPub.js';
-import { ActorValidator, getLinkHref } from './schemas/activityPub.js';
+import { getLinkHref } from './schemas/activityPub.js';
 import { incrementalBackoff } from './util/incrementalBackoff.js';
-import { compact } from './util/jsonld.js';
-import { HOUR } from './constants.js';
+import { ACTIVITY_JSON_MIME } from './constants.js';
+import type { Instance } from './instance.js';
 
 const debug = createDebug('me:outbox');
 
 const MAX_INBOX_FETCH_CONCURRENCY = 100;
 
 export type OutboxOptions = Readonly<{
+  fastify: Instance;
   db: Database;
-  cacheSize?: number;
-  cacheTTL?: number;
 }>;
 
 type GetInboxesOptions = Readonly<{
@@ -35,19 +32,15 @@ type GetInboxesOptions = Readonly<{
 }>;
 
 export class Outbox {
+  private readonly fastify: Instance;
   private readonly db: Database;
-  private readonly inboxCache: LRU<string, ReadonlyArray<URL>>;
 
   constructor({
+    fastify,
     db,
-    cacheSize = 100,
-    cacheTTL = HOUR,
   }: OutboxOptions) {
+    this.fastify = fastify;
     this.db = db;
-    this.inboxCache = new LRU({
-      max: cacheSize,
-      ttl: cacheTTL,
-    });
   }
 
   public async runJobs(): Promise<void> {
@@ -82,7 +75,11 @@ export class Outbox {
     const [inbox] = await this.getInboxes(target, {
       resolve: false,
     });
-    assert(inbox !== undefined, `Did not get an inbox for ${target}`);
+    this.fastify.assert(
+      inbox !== undefined,
+      400,
+      `Did not get an inbox for ${target}`,
+    );
     await this.queueJob(user, inbox, data);
   }
 
@@ -210,7 +207,7 @@ export class Outbox {
       `host: ${host}`,
       `date: ${date}`,
       `digest: sha-256=${digest}`,
-      'content-type: application/activity+json'
+      `content-type: ${ACTIVITY_JSON_MIME}`,
     ].join('\n');
 
     const signature = createSign('RSA-SHA256')
@@ -224,7 +221,7 @@ export class Outbox {
       date,
       host,
       digest: `sha-256=${digest}`,
-      'content-type': 'application/activity+json',
+      'content-type': ACTIVITY_JSON_MIME,
       'user-agent': USER_AGENT,
       'signature': [
         `keyId="${keyId}"`,
@@ -264,38 +261,23 @@ export class Outbox {
     target: URL,
     options: GetInboxesOptions,
   ): Promise<ReadonlyArray<URL>> {
+    const fastify: Instance = this.fastify;
+
     try {
       if (target.host === HOST) {
         return this.getLocalInboxes(target, options);
       }
 
-      const cacheKey = target.toString();
-      const cached = this.inboxCache.get(cacheKey);
-      if (cached) {
-        return cached;
-      }
+      return fastify.profileFetcher.withProfile(target, async (profile) => {
+        const inbox = profile.endpoints?.sharedInbox || profile.inbox;
+        fastify.assert(
+          typeof inbox === 'string',
+          400,
+          'Missing inbox field',
+        );
 
-      const res = await fetch(target, {
-        headers: {
-          'accept': 'application/activity+json',
-          'user-agent': USER_AGENT,
-        },
+        return [new URL(inbox)];
       });
-
-      assert(200 <= res.status && res.status < 300, 'Invalid status code');
-
-      const json = await res.json();
-      const actor = await compact(json);
-      assert(ActorValidator.Check(actor), 'Response is not actor');
-
-      const inbox = actor.endpoints?.sharedInbox || actor.inbox;
-      assert.strictEqual(typeof inbox, 'string', 'Missing inbox field');
-
-      const urls = [new URL(inbox)];
-
-      this.inboxCache.set(cacheKey, urls);
-
-      return urls;
     } catch (error) {
       debug('getInbox got error=%O', error);
       return [];
@@ -306,12 +288,17 @@ export class Outbox {
     target: URL,
     options: GetInboxesOptions
   ): Promise<ReadonlyArray<URL>> {
-    assert(!target.search, 'Queries are not allowed for local inboxes');
+    const fastify: Instance = this.fastify;
+    fastify.assert(
+      !target.search,
+      403,
+      'Queries are not allowed for local inboxes',
+    );
 
     const userMatch = target.pathname.match(/^\/users\/([^/]+)$/);
     if (userMatch) {
       const user = await this.db.loadUser(userMatch[1]);
-      assert(user, `Local user ${userMatch[1]} not found`);
+      fastify.assert(user, 404, `Local user ${userMatch[1]} not found`);
       return [user.getInboxURL()];
     }
 
@@ -319,13 +306,14 @@ export class Outbox {
       /^\/users\/([^/]+)\/followers$/
     );
     if (followersMatch) {
-      assert(
+      fastify.assert(
         options.resolve,
+        500,
         `Refuse to resolve local followers for ${target}`,
       );
 
       const user = await this.db.loadUser(followersMatch[1]);
-      assert(user, `Local user ${followersMatch[1]} not found`);
+      fastify.assert(user, 404, `Local user ${followersMatch[1]} not found`);
 
       const followers = await this.db.getFollowers(user.getURL());
       const inboxes = await pMap(
@@ -341,9 +329,5 @@ export class Outbox {
     }
 
     throw new Error(`Failed to parse local url ${target}`);
-  }
-
-  private invalidateInbox(target: URL): void {
-    this.inboxCache.delete(target.toString());
   }
 }
