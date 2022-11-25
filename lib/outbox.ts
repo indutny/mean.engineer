@@ -12,8 +12,13 @@ import {
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import { OutboxJob } from './models/outboxJob.js';
-import type { Activity, Follow, UnknownObject } from './schemas/activityPub.js';
-import { getLinkHref } from './schemas/activityPub.js';
+import type {
+  Activity,
+  Follow,
+  UnknownObject,
+  Link,
+} from './schemas/activityPub.js';
+import { getLinkURL } from './schemas/activityPub.js';
 import { incrementalBackoff } from './util/incrementalBackoff.js';
 import { ACTIVITY_JSON_MIME } from './constants.js';
 import type { Instance } from './instance.js';
@@ -68,7 +73,7 @@ export class Outbox {
       object: follow,
     };
 
-    const target = new URL(getLinkHref(follow.actor));
+    const target = getLinkURL(follow.actor);
 
     debug(`accepting follow ${us} <- ${target}`);
 
@@ -93,6 +98,7 @@ export class Outbox {
     const {
       to,
       cc,
+      audience,
     } = data;
 
     const id = user.createActivityId();
@@ -103,16 +109,17 @@ export class Outbox {
     };
 
     debug(
-      'sending activity %O to=%j cc=%j bto=%j bcc=%j',
-      activityWithId, to, cc, bcc, bto,
+      'sending activity %O to=%j cc=%j bto=%j bcc=%j audience=%j',
+      activityWithId, to, cc, bcc, bto, audience,
     );
 
-    const targets = [bto, bcc, to, cc].flat();
+    const targets = [bto, bcc, to, cc, audience].filter(
+      (x): x is Link => x !== undefined
+    ).flat();
 
     const targetURLs = targets
       .filter(x => x !== 'as:Public')
-      .filter((x: string | undefined): x is string => x !== undefined)
-      .map(x => new URL(x));
+      .map(x => getLinkURL(x));
 
     const inboxes = await pMap(
       targetURLs,
@@ -142,14 +149,19 @@ export class Outbox {
     const {
       to,
       cc,
-      bto,
-      bcc,
       audience,
       published,
     } = object;
 
+    const {
+      bto,
+      bcc,
+      ...prunedObject
+    } = object;
+
     debug(
-      'sending object %O to=%j cc=%j bto=%j bcc=%j', object, to, cc, bcc, bto,
+      'sending object %O to=%j cc=%j bto=%j bcc=%j audience=%j',
+      prunedObject, to, cc, bcc, bto, audience,
     );
 
     return await this.sendActivity(user, {
@@ -157,7 +169,7 @@ export class Outbox {
       type: 'Create',
       actor: user.getURL().toString(),
       object: {
-        ...object,
+        ...prunedObject,
         id: user.createObjectId().toString(),
       },
 

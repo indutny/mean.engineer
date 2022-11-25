@@ -4,7 +4,7 @@ import createDebug from 'debug';
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import type { Activity, Follow, Undo, Create } from './schemas/activityPub.js';
-import { getLinkHref } from './schemas/activityPub.js';
+import { getLinkURL } from './schemas/activityPub.js';
 import type { Outbox } from './outbox.js';
 import { isSameHost } from './util/isSameHost.js';
 
@@ -39,6 +39,8 @@ export class Inbox {
       return this.handleCreate(user, activity);
     }
 
+    // TODO(indutny): expand to/cc/audience if they are local.
+
     throw new Error(`Unsupported inbox activity: ${type}`);
   }
 
@@ -46,7 +48,7 @@ export class Inbox {
     user: User,
     follow: Follow,
   ): Promise<void> {
-    const object = new URL(getLinkHref(follow.object));
+    const object = getLinkURL(follow.object);
     const owner = user.getURL();
     assert.strictEqual(
       object.toString(),
@@ -54,7 +56,7 @@ export class Inbox {
       'Invalid "object" field of Follow request'
     );
 
-    const actor = new URL(getLinkHref(follow.actor));
+    const actor = getLinkURL(follow.actor);
 
     await this.db.follow({
       owner,
@@ -71,7 +73,7 @@ export class Inbox {
 
   private async handleUndo(user: User, undo: Undo): Promise<void> {
     const { object } = undo;
-    const actor = new URL(getLinkHref(undo.actor));
+    const actor = getLinkURL(undo.actor);
 
     assert(
       object.id && isSameHost(new URL(object.id), actor),
@@ -91,7 +93,7 @@ export class Inbox {
     undo: Undo,
     follow: Follow,
   ): Promise<void> {
-    const actor = new URL(getLinkHref(undo.actor));
+    const actor = getLinkURL(undo.actor);
     await this.db.unfollow({
       actor,
       owner: user.getURL(),
@@ -103,7 +105,7 @@ export class Inbox {
     create: Create,
   ): Promise<void> {
     const { object } = create;
-    const actor = new URL(getLinkHref(create.actor));
+    const actor = getLinkURL(create.actor);
 
     const owner = user.getURL();
 
@@ -113,5 +115,7 @@ export class Inbox {
     );
 
     // TODO(indutny): put the object into inbox
+    // TODO(indutny): verify that the sender is in the following list of the
+    // user.
   }
 }

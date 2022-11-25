@@ -1,3 +1,4 @@
+import assert from 'assert';
 import {
   Static,
   Type as T,
@@ -10,9 +11,9 @@ import { TypeCompiler } from '@sinclair/typebox/compiler';
 // Utilities
 //
 
-const LDString = T.Union([
-  T.String(),
-  T.Array(T.String()),
+const MaybeArray = <Schema extends TSchema>(schema: Schema) => T.Union([
+  schema,
+  T.Array(schema),
 ]);
 
 //
@@ -108,6 +109,21 @@ export const LinkTypeSchema = T.Literal('Mention');
 export type LinkType = Static<typeof LinkTypeSchema>;
 
 //
+// Common types
+//
+
+export const LinkSchema = MaybeArray(T.Union([
+  T.String(),
+  T.Object({
+    type: T.Optional(T.String()),
+    id: T.Optional(T.String()),
+    href: T.String(),
+  }),
+]));
+
+export type Link = Static<typeof LinkSchema>;
+
+//
 // Objects
 //
 
@@ -119,11 +135,11 @@ const ObjectProps = {
   content: T.String(),
   published: T.String(),
   mediaType: T.String(),
-  to: LDString,
-  bto: LDString,
-  cc: LDString,
-  bcc: LDString,
-  audience: LDString,
+  to: LinkSchema,
+  bto: LinkSchema,
+  cc: LinkSchema,
+  bcc: LinkSchema,
+  audience: LinkSchema,
 };
 
 function createObjectSchema<
@@ -147,27 +163,22 @@ export type UnknownObject = Static<typeof UnknownObjectSchema>;
 
 export const UnknownObjectValidator = TypeCompiler.Compile(UnknownObjectSchema);
 
-export const LinkSchema = T.Union([
-  T.String(),
-  createObjectSchema(
-    T.Union([ T.Literal('Link'), T.Literal('Mention') ]),
-    {
-      rel: T.String(),
-    },
-    {
-      href: T.String(),
-    },
-  )
-]);
-
-export type Link = Static<typeof LinkSchema>;
-
-export function getLinkHref(link: Link): string {
-  if (typeof link === 'string') {
-    return link;
+export function getLinkURL(link: Link): URL {
+  if (Array.isArray(link)) {
+    throw new Error('Link must not be an array');
   }
 
-  return link.href;
+  if (typeof link === 'string') {
+    return new URL(link);
+  }
+
+  if (link.type === 'Link' || link.type === 'Mention') {
+    assert(link.href, 'Link must have a href');
+    return new URL(link.href);
+  }
+
+  assert(link.id, `Object must have an id (type: ${link.type})`);
+  return new URL(link.id);
 }
 
 const ObjectOrLink = <Value extends TSchema>(value: Value) => T.Union([
