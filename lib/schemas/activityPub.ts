@@ -233,6 +233,8 @@ export type OrderedCollectionPage = Static<typeof OrderedCollectionPageSchema>;
 export const ActorSchema = createObjectSchema(
   ActorTypeSchema,
   {
+    following: T.String(),
+    followers: T.String(),
     preferredUsername: T.String(),
     endpoints: T.Partial(T.Object({
       sharedInbox: T.String(),
@@ -247,8 +249,6 @@ export const ActorSchema = createObjectSchema(
   {
     inbox: T.String(),
     outbox: T.String(),
-    following: T.String(),
-    followers: T.String(),
   },
 );
 
