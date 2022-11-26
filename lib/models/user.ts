@@ -108,8 +108,12 @@ export class User implements UserAttributes {
   }
 
   public createObjectId(): URL {
+    return this.getObjectId(nanoid());
+  }
+
+  public getObjectId(object: string): URL {
     return new URL(
-      `./users/${this.username}/objects/${nanoid()}`,
+      `./users/${this.username}/objects/${object}`,
       BASE_URL,
     );
   }

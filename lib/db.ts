@@ -195,6 +195,19 @@ export class Database {
     `).run(object.toColumns());
   }
 
+  public async loadObject(url: URL): Promise<InboxObject | undefined> {
+    const columns = this.db.prepare(`
+      SELECT * FROM objects
+      WHERE url = $url;
+    `).get({ url: url.toString() });
+
+    if (!columns) {
+      return undefined;
+    }
+
+    return InboxObject.fromColumns(columns);
+  }
+
   public async getPaginatedTimeline(
     owner: URL,
     page?: number,

@@ -13,6 +13,7 @@ import type { User } from '../models/user.js';
 import {
   ActorSchema,
   ActivityValidator,
+  UnknownObjectSchema,
   UnknownObjectValidator,
   getLinkURL,
 } from '../schemas/activityPub.js';
@@ -90,6 +91,31 @@ export default async (fastify: Instance): Promise<void> => {
         publicKeyPem: targetUser.publicKey,
       },
     };
+  });
+
+  fastify.get<{
+    Params: { user?: string; object?: string }
+  }>('/users/:user/objects/:object', {
+    schema: {
+      response: {
+        200: UnknownObjectSchema,
+      },
+    }
+  }, async (request, reply) => {
+    const { targetUser } = request;
+    fastify.assert(targetUser, 400, 'Missing target user');
+
+    const { object } = request.params;
+    fastify.assert(object, 400, 'Missing target object');
+
+    const objectURL = targetUser.getObjectId(object);
+
+    const inboxObject = await fastify.db.loadObject(objectURL);
+    if (!inboxObject) {
+      return reply.notFound('Object not found');
+    }
+
+    return inboxObject.object;
   });
 
   fastify.get<{
