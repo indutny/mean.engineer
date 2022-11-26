@@ -140,6 +140,7 @@ const ObjectProps = {
   cc: LinkSchema,
   bcc: LinkSchema,
   audience: LinkSchema,
+  tag: LinkSchema,
 };
 
 function createObjectSchema<

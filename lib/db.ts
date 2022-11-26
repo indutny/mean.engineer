@@ -17,11 +17,6 @@ export type FollowOptions = Readonly<{
   actor: URL;
 }>;
 
-export type UnfollowOptions = Readonly<{
-  owner: URL;
-  actor: URL;
-}>;
-
 type PaginateOptions = Readonly<{
   page?: number;
   pluck?: boolean;
@@ -131,7 +126,7 @@ export class Database {
     });
   }
 
-  public async unfollow({ owner, actor }: UnfollowOptions): Promise<void> {
+  public async unfollow({ owner, actor }: FollowOptions): Promise<void> {
     // TODO(indutny): cache statement
     this.db.prepare(`
       DELETE FROM followers
@@ -147,6 +142,13 @@ export class Database {
       WHERE owner = $owner
       ORDER BY createdAt DESC
     `).pluck().all({ owner: owner.toString() });
+  }
+
+  public async isFollowing({ owner, actor }: FollowOptions): Promise<boolean> {
+    return this.db.prepare(`
+      SELECT COUNT(*) FROM followers
+      WHERE owner = $owner AND actor = $actor
+    `).pluck().get({ owner: owner.toString(), actor: actor.toString() }) !== 0;
   }
 
   public async getPaginatedFollowers(

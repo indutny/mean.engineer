@@ -108,14 +108,37 @@ export class Inbox {
     const actor = getLinkURL(create.actor);
 
     const owner = user.getURL();
+    const ownerString = owner.toString();
 
     assert(
       object.id && isSameHost(new URL(object.id), actor),
       `Cross-origin create object=${object.id} actor=${actor}`
     );
 
+    const isFollowing = await this.db.isFollowing({ owner, actor });
+    const isMention = [object.tag].flat().some((tag) => {
+      if (!tag) {
+        return false;
+      }
+      if (typeof tag === 'string') {
+        return false;
+      }
+      return tag.type === 'Mention' && tag.href === ownerString;
+    });
+
+    if (!isFollowing || !isMention) {
+      debug(
+        'dropping object %O because we don\'t follow actor %s',
+        object, actor,
+      );
+      return;
+    }
+
+    const finalObject = {
+      ...object,
+      attributedTo: actor.toString(),
+    };
+
     // TODO(indutny): put the object into inbox
-    // TODO(indutny): verify that the sender is in the following list of the
-    // user.
   }
 }

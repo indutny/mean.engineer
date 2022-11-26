@@ -101,6 +101,9 @@ export class ProfileFetcher {
       );
     }
 
+    // TODO(indutny): use cache headers in response to determine max age of
+    //   the cached profile.
+
     const json = await response.json();
     const actor = await compact(json);
     debug('got remote actor %O', actor);
