@@ -230,7 +230,7 @@ export class Database {
   ): Promise<Paginated<UnknownObject>> {
     return this.paginate(`
       SELECT <COLUMNS> FROM objects
-      WHERE owner = $owner
+      WHERE owner = $owner AND actor != $owner
       ORDER BY createdAt DESC
     `, '*', { owner: owner.toString() }, {
       page,
@@ -403,11 +403,12 @@ export class Database {
           createdAt INTEGER NON NULL
         );
 
-        CREATE INDEX objects_by_owner ON objects (owner, createdAt DESC);
+        CREATE INDEX objects_for_inbox ON objects
+          (owner, actor, createdAt DESC);
         CREATE INDEX objects_by_createdAt ON objects (createdAt DESC);
         CREATE INDEX objects_by_public ON objects (isPublic, createdAt DESC);
-        CREATE INDEX objects_by_public_and_actor ON objects
-          (isPublic, actor, createdAt DESC);
+        CREATE INDEX objects_for_public_timeline ON objects
+          (isPublic, owner, createdAt DESC);
       `);
     },
   ];
