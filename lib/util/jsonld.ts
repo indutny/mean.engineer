@@ -33,7 +33,7 @@ export async function compact(doc: unknown): Promise<unknown> {
       documentLoader,
     });
   } catch (error) {
-    debug('Failed to parse incoming document %O', doc);
+    debug('Failed to parse incoming document %j', doc);
     throw error;
   }
 }
