@@ -189,9 +189,9 @@ export class Database {
   public async saveObject(object: InboxObject): Promise<void> {
     this.db.prepare(`
       INSERT OR REPLACE INTO objects
-      (url, owner, json, isPublic, createdAt)
+      (url, owner, actor, json, isPublic, createdAt)
       VALUES
-      ($url, $owner, $json, $isPublic, $createdAt)
+      ($url, $owner, $actor, $json, $isPublic, $createdAt)
     `).run(object.toColumns());
   }
 
