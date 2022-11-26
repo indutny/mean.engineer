@@ -1,11 +1,11 @@
 import {
-  randomUUID,
   randomBytes,
   pbkdf2,
   generateKeyPairSync,
   timingSafeEqual,
 } from 'crypto';
 import { promisify } from 'util';
+import { nanoid } from 'nanoid';
 
 import {
   BASE_URL,
@@ -100,16 +100,16 @@ export class User implements UserAttributes {
   }
 
   public createTemporaryId(): URL {
-    return new URL(`./${randomUUID()}`, BASE_URL);
+    return new URL(`./${nanoid()}`, BASE_URL);
   }
 
   public createActivityId(): URL {
-    return new URL(`./users/${this.username}/${randomUUID()}`, BASE_URL);
+    return new URL(`./users/${this.username}/${nanoid()}`, BASE_URL);
   }
 
   public createObjectId(): URL {
     return new URL(
-      `./users/${this.username}/objects/${randomUUID()}`,
+      `./users/${this.username}/objects/${nanoid()}`,
       BASE_URL,
     );
   }

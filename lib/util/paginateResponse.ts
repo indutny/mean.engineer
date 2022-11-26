@@ -4,20 +4,21 @@ import type { Paginated } from '../db.js';
 import type {
   OrderedCollection,
   OrderedCollectionPage,
+  UnknownObject,
 } from '../schemas/activityPub.js';
 
 export type PaginateReply = OrderedCollection | OrderedCollectionPage;
 
-export type PaginateOptions = Readonly<{
+export type PaginateOptions<Item extends UnknownObject | URL> = Readonly<{
   url: URL;
   summary: string;
-  getData(page?: number): Promise<Paginated<URL>>;
+  getData(page?: number): Promise<Paginated<Item>>;
 }>;
 
-export async function paginateResponse(
+export async function paginateResponse<Item extends UnknownObject | URL>(
   request: FastifyRequest<{ Querystring: { page?: string } }>,
   reply: FastifyReply,
-  { url, summary, getData } : PaginateOptions,
+  { url, summary, getData } : PaginateOptions<Item>,
 ): Promise<PaginateReply | void> {
   const { page: pageString } = request.query;
 
@@ -43,8 +44,8 @@ export async function paginateResponse(
   }
 
   const {
-    totalRows,
-    rows,
+    totalItems,
+    items,
     hasMore,
   } = await getData(dbPage);
 
@@ -54,8 +55,8 @@ export async function paginateResponse(
       id: url.toString(),
       type: 'OrderedCollection',
       summary,
-      totalItems: totalRows,
-      first: totalRows > 0 ? new URL('?page=1', url).toString() : undefined,
+      totalItems: totalItems,
+      first: totalItems > 0 ? new URL('?page=1', url).toString() : undefined,
     };
   }
 
@@ -63,9 +64,9 @@ export async function paginateResponse(
     '@context': 'https://www.w3.org/ns/activitystreams',
     id: new URL(`?page=${page}`, url).toString(),
     type: 'OrderedCollectionPage',
-    totalItems: totalRows,
+    totalItems: totalItems,
     partOf: url.toString(),
     next: hasMore ? new URL(`?page=${nextPage}`, url).toString() : undefined,
-    orderedItems: rows?.map(row => row.toString()),
+    orderedItems: items?.slice(),
   };
 }

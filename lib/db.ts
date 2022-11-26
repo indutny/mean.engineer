@@ -5,10 +5,12 @@ import { DB_PATH, DB_PAGE_SIZE } from './config.js';
 import { User } from './models/user.js';
 import { AuthToken } from './models/authToken.js';
 import { OutboxJob } from './models/outboxJob.js';
+import { InboxObject, type InboxObjectColumns } from './models/inboxObject.js';
+import { type UnknownObject } from './schemas/activityPub.js';
 
-export type Paginated<Row> = Readonly<{
-  totalRows: number;
-  rows?: ReadonlyArray<Row>;
+export type Paginated<Item> = Readonly<{
+  totalItems: number;
+  items?: ReadonlyArray<Item>;
   hasMore: boolean;
 }>;
 
@@ -17,9 +19,10 @@ export type FollowOptions = Readonly<{
   actor: URL;
 }>;
 
-type PaginateOptions = Readonly<{
+type PaginateOptions<Columns, Item> = Readonly<{
   page?: number;
-  pluck?: boolean;
+
+  fromColumns(columns: Columns): Item;
 }>;
 
 export class Database {
@@ -159,7 +162,10 @@ export class Database {
       SELECT <COLUMNS> FROM followers
       WHERE owner = $owner
       ORDER BY createdAt DESC
-    `, 'actor', { owner: owner.toString() }, { page, pluck: true });
+    `, 'actor', { owner: owner.toString() }, {
+      page,
+      fromColumns: ({ actor }: { actor: URL }) => actor,
+    });
   }
 
   public async getPaginatedFollowing(
@@ -170,7 +176,55 @@ export class Database {
       SELECT <COLUMNS> FROM followers
       WHERE actor = $actor
       ORDER BY createdAt DESC
-    `, 'owner', { actor: actor.toString() }, { page, pluck: true });
+    `, 'owner', { actor: actor.toString() }, {
+      page,
+      fromColumns: ({ owner }: { owner: URL }) => owner,
+    });
+  }
+
+  //
+  // Objects
+  //
+
+  public async saveObject(object: InboxObject): Promise<void> {
+    this.db.prepare(`
+      INSERT OR REPLACE INTO objects
+      (url, owner, json, isPublic, createdAt)
+      VALUES
+      ($url, $owner, $json, $isPublic, $createdAt)
+    `).run(object.toColumns());
+  }
+
+  public async getPaginatedTimeline(
+    actor: URL,
+    page?: number,
+  ): Promise<Paginated<UnknownObject>> {
+    return this.paginate(`
+      SELECT <COLUMNS> FROM objects
+      WHERE isPublic == 1 AND actor = $actor
+      ORDER BY createdAt DESC
+    `, '*', { actor: actor.toString() }, {
+      page,
+      fromColumns(columns: InboxObjectColumns) {
+        return InboxObject.fromColumns(columns).object;
+      },
+    });
+  }
+
+  public async getPaginatedInbox(
+    owner: URL,
+    page?: number,
+  ): Promise<Paginated<UnknownObject>> {
+    return this.paginate(`
+      SELECT <COLUMNS> FROM objects
+      WHERE owner = $owner
+      ORDER BY createdAt DESC
+    `, '*', { owner: owner.toString() }, {
+      page,
+      fromColumns(columns: InboxObjectColumns) {
+        return InboxObject.fromColumns(columns).object;
+      },
+    });
   }
 
   //
@@ -227,43 +281,38 @@ export class Database {
   //
 
   // TODO(indutny): cache
-  private paginate<Row>(
+  private paginate<Columns, Item>(
     query: string,
     columns: string,
     params: Record<string, unknown>,
-    { page, pluck = false }: PaginateOptions
-  ): Paginated<Row> {
-    const totalRows = this.db.prepare(
+    { page, fromColumns }: PaginateOptions<Columns, Item>
+  ): Paginated<Item> {
+    const totalItems = this.db.prepare(
       query.replace('<COLUMNS>', 'COUNT(*)')
     ).pluck().get(params);
 
-    let rows: ReadonlyArray<Row> | undefined;
-    let hasMore = totalRows !== 0;
+    let items: ReadonlyArray<Item> | undefined;
+    let hasMore = totalItems !== 0;
     if (page !== undefined) {
-      let stmt = this.db.prepare(`
+      const stmt = this.db.prepare(`
         ${query.replace('<COLUMNS>', columns)}
         LIMIT $pageSize
         OFFSET $offset
       `);
 
-      if (pluck) {
-        stmt = stmt.pluck();
-      }
-
-
       const offset = page * DB_PAGE_SIZE;
-      rows = stmt.all({
+      items = stmt.all({
         ...params,
         pageSize: DB_PAGE_SIZE,
         offset,
-      });
+      }).map(columns => fromColumns(columns));
 
-      hasMore = (offset + rows.length) < totalRows;
+      hasMore = (offset + items.length) < totalItems;
     }
 
     return {
-      totalRows,
-      rows,
+      totalItems,
+      items,
       hasMore,
     };
   }
@@ -333,15 +382,19 @@ export class Database {
         CREATE INDEX likes_by_post ON likes (post, createdAt ASC);
 
         CREATE TABLE objects (
-          id STRING NON NULL,
+          url STRING PRIMARY KEY,
           owner STRING NON NULL,
-          content STRING NON NULL,
-          createdAt INTEGER NON NULL,
-
-          PRIMARY KEY (owner, id)
+          actor STRING NON NULL,
+          json STRING NON NULL,
+          isPublic INTEGER NON NULL,
+          createdAt INTEGER NON NULL
         );
 
         CREATE INDEX objects_by_owner ON objects (owner, createdAt DESC);
+        CREATE INDEX objects_by_createdAt ON objects (createdAt DESC);
+        CREATE INDEX objects_by_public ON objects (isPublic, createdAt DESC);
+        CREATE INDEX objects_by_public_and_actor ON objects
+          (isPublic, actor, createdAt DESC);
       `);
     },
   ];

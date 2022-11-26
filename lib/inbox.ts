@@ -3,6 +3,7 @@ import createDebug from 'debug';
 
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
+import { InboxObject } from './models/inboxObject.js';
 import type { Activity, Follow, Undo, Create } from './schemas/activityPub.js';
 import { getLinkURL } from './schemas/activityPub.js';
 import type { Outbox } from './outbox.js';
@@ -82,7 +83,7 @@ export class Inbox {
 
     const { type } = object;
     if (type === 'Follow') {
-      return this.handleUnfollow(user, undo, object);
+      return this.handleUnfollow(user, undo);
     }
 
     throw new Error(`Unsupported undo object: ${type}`);
@@ -91,7 +92,6 @@ export class Inbox {
   private async handleUnfollow(
     user: User,
     undo: Undo,
-    follow: Follow,
   ): Promise<void> {
     const actor = getLinkURL(undo.actor);
     await this.db.unfollow({
@@ -136,9 +136,17 @@ export class Inbox {
 
     const finalObject = {
       ...object,
+      to: create.to,
+      cc: create.cc,
+      audience: create.audience,
       attributedTo: actor.toString(),
     };
 
-    // TODO(indutny): put the object into inbox
+    this.db.saveObject(InboxObject.create({
+      url: getLinkURL(finalObject),
+      owner: user.getURL(),
+      actor: getLinkURL(create.actor),
+      object: finalObject,
+    }));
   }
 }

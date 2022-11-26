@@ -117,7 +117,7 @@ export const LinkSchema = MaybeArray(T.Union([
   T.Object({
     type: T.Optional(T.String()),
     id: T.Optional(T.String()),
-    href: T.String(),
+    href: T.Optional(T.String()),
   }),
 ]));
 
@@ -163,6 +163,11 @@ export const UnknownObjectSchema = createObjectSchema(T.Optional(T.String()), {
 export type UnknownObject = Static<typeof UnknownObjectSchema>;
 
 export const UnknownObjectValidator = TypeCompiler.Compile(UnknownObjectSchema);
+
+export function isObjectPublic(object: UnknownObject): boolean {
+  const { to, cc, audience } = object;
+  return [to, cc, audience].flat().some(x => x === 'as:Public');
+}
 
 export function getLinkURL(link: Link): URL {
   if (Array.isArray(link)) {

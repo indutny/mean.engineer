@@ -14,6 +14,7 @@ import {
   ActorSchema,
   ActivityValidator,
   UnknownObjectValidator,
+  getLinkURL,
 } from '../schemas/activityPub.js';
 import type { Instance } from '../instance.js';
 
@@ -95,7 +96,6 @@ export default async (fastify: Instance): Promise<void> => {
     return reply.internalServerError('not implemented');
   });
 
-  // TODO(indutny): assign id to the object.
   fastify.post('/users/:user/outbox', async (request, reply) => {
     const { user, targetUser } = request;
     fastify.assert(targetUser, 400, 'Missing target user');
@@ -154,8 +154,27 @@ export default async (fastify: Instance): Promise<void> => {
     });
   });
 
-  fastify.get('/users/:user/inbox', async (request, reply) => {
-    reply.internalServerError('not implemented');
+  fastify.get<{
+    Querystring: { page?: string };
+  }>('/users/:user/inbox', async (request, reply) => {
+    const { user, targetUser } = request;
+    fastify.assert(targetUser, 400, 'Missing target user');
+
+    if (!user) {
+      return reply.unauthorized();
+    }
+
+    if (!user.isSame(targetUser)) {
+      return reply.forbidden('invalid authorization');
+    }
+
+    const userURL = user.getURL();
+
+    return paginateResponse(request, reply, {
+      url: new URL(`${userURL}/inbox`),
+      summary: `${user.profileName}'s inbox`,
+      getData: (page) => fastify.db.getPaginatedInbox(userURL, page),
+    });
   });
 
   fastify.post('/users/:user/inbox', async (request, reply) => {
@@ -171,13 +190,13 @@ export default async (fastify: Instance): Promise<void> => {
       return reply.notImplemented('Activity not supported');
     }
 
-    const { id, actor } = request.body;
-    if (request.senderKey.owner !== actor) {
+    const actor = getLinkURL(request.body.actor);
+    if (request.senderKey.owner !== actor.toString()) {
       return reply.forbidden('Signature does not match actor');
     }
 
     // Can't squat others ids!
-    if (!id || !isSameHost(new URL(id), new URL(actor))) {
+    if (!isSameHost(getLinkURL(request.body), actor)) {
       debug('invalid activity origin body=%O', request.body);
       return reply.forbidden('Invalid activity origin');
     }

@@ -28,6 +28,7 @@
     "fastify-plugin": "^4.3.0",
     "jsonld": "^8.1.0",
     "lru-cache": "^7.14.1",
+    "nanoid": "^4.0.0",
     "p-limit": "^4.0.0",
     "p-map": "^5.5.0",
     "secure-json-parse": "^2.5.0",

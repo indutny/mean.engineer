@@ -12,6 +12,7 @@ import {
 import type { Database } from './db.js';
 import type { User } from './models/user.js';
 import { OutboxJob } from './models/outboxJob.js';
+import { InboxObject } from './models/inboxObject.js';
 import type {
   Activity,
   Follow,
@@ -92,6 +93,7 @@ export class Outbox {
     const {
       bto,
       bcc,
+      object,
       ...data
     } = activity;
 
@@ -106,6 +108,12 @@ export class Outbox {
     const activityWithId = {
       ...data,
       id: id.toString(),
+      object: typeof object === 'object' ? {
+        ...object,
+        to,
+        cc,
+        audience,
+      } : object,
     };
 
     debug(
@@ -398,5 +406,14 @@ export class Outbox {
   ): Promise<void> {
     // TODO(indutny): implement me.
     debug('handleActivity %O', activity);
+
+    if (activity.type === 'Create') {
+      await this.db.saveObject(InboxObject.create({
+        url: getLinkURL(activity.object),
+        object: activity.object,
+        actor: getLinkURL(activity.actor),
+        owner: user.getURL(),
+      }));
+    }
   }
 }
