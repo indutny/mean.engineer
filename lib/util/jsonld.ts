@@ -1,6 +1,9 @@
 import { readFileSync } from 'fs';
 import sjson from 'secure-json-parse';
 import * as badJSONLD from 'jsonld';
+import createDebug from 'debug';
+
+const debug = createDebug('me:jsonld');
 
 // Sadly types for JSONLD are really off.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,7 +28,12 @@ async function documentLoader(url: string): Promise<unknown> {
 }
 
 export async function compact(doc: unknown): Promise<unknown> {
-  return jsonld.compact(doc, Array.from(CONTEXT_MAP.keys()), {
-    documentLoader,
-  });
+  try {
+    return await jsonld.compact(doc, Array.from(CONTEXT_MAP.keys()), {
+      documentLoader,
+    });
+  } catch (error) {
+    debug('Failed to parse incoming document %O', doc);
+    throw error;
+  }
 }
