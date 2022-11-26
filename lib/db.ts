@@ -196,14 +196,14 @@ export class Database {
   }
 
   public async getPaginatedTimeline(
-    actor: URL,
+    owner: URL,
     page?: number,
   ): Promise<Paginated<UnknownObject>> {
     return this.paginate(`
       SELECT <COLUMNS> FROM objects
-      WHERE isPublic == 1 AND actor = $actor
+      WHERE isPublic == 1 AND owner = $owner
       ORDER BY createdAt DESC
-    `, '*', { actor: actor.toString() }, {
+    `, '*', { owner: owner.toString() }, {
       page,
       fromColumns(columns: InboxObjectColumns) {
         return InboxObject.fromColumns(columns).object;

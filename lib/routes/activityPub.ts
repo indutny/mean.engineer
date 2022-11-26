@@ -92,8 +92,20 @@ export default async (fastify: Instance): Promise<void> => {
     };
   });
 
-  fastify.get('/users/:user/outbox', (request, reply) => {
-    return reply.internalServerError('not implemented');
+  fastify.get<{
+    Querystring: { page?: string };
+    Reply: PaginateReply;
+  }>('/users/:user/outbox', (request, reply) => {
+    const { targetUser } = request;
+    fastify.assert(targetUser, 400, 'Missing target user');
+
+    const userURL = targetUser.getURL();
+
+    return paginateResponse(request, reply, {
+      url: new URL(`${userURL}/outbox`),
+      summary: `${targetUser.profileName}'s timeline`,
+      getData: (page) => fastify.db.getPaginatedTimeline(userURL, page),
+    });
   });
 
   fastify.post('/users/:user/outbox', async (request, reply) => {
@@ -156,6 +168,7 @@ export default async (fastify: Instance): Promise<void> => {
 
   fastify.get<{
     Querystring: { page?: string };
+    Reply: PaginateReply;
   }>('/users/:user/inbox', async (request, reply) => {
     const { user, targetUser } = request;
     fastify.assert(targetUser, 400, 'Missing target user');
