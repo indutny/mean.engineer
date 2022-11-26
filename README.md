@@ -1,6 +1,7 @@
 # mean.engineer
 
-An incomplete implementation of ActivityPub protocol.
+An incomplete implementation of
+[ActivityPub](https://www.w3.org/TR/activitypub/) protocol.
 
 ## LICENSE
 
